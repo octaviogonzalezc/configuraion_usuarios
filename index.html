@@ -132,6 +132,8 @@ tbody tr:hover{background:var(--bg-hover);}
 .field-group input[type=text], .field-group input[type=email], .field-group input[type=password], .field-group select, .field-group textarea{background:var(--bg-input);border:1px solid var(--border);color:var(--text-primary);font-size:.86rem;padding:9px 10px;border-radius:4px;font-family:inherit;}
 .field-group textarea{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.8rem;resize:vertical;}
 .field-hint{font-size:.72rem;color:var(--text-muted);}
+.field-hint.hint-ok{color:var(--accent-green-text);}
+.field-hint.hint-warn{color:var(--accent-gold);}
 .mode-switch{display:inline-flex;flex-wrap:wrap;gap:4px;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;padding:3px;width:fit-content;}
 .mode-btn{background:transparent;border:none;color:var(--text-secondary);font-size:.78rem;font-weight:700;padding:6px 12px;border-radius:4px;cursor:pointer;font-family:inherit;white-space:nowrap;}
 .mode-btn.is-active{background:var(--accent-gold-soft);color:var(--accent-gold);}
@@ -328,6 +330,11 @@ tbody tr:hover{background:var(--bg-hover);}
       </button>
     </div>
     <div class="modal-body">
+      <div class="field-group">
+        <span class="field-label">Correo*</span>
+        <input type="email" id="auCorreo" placeholder="nombre@dominio.com">
+        <span class="field-hint" id="auCorreoEstado"></span>
+      </div>
       <div class="field-row2">
         <div class="field-group">
           <span class="field-label">Nombre*</span>
@@ -343,10 +350,7 @@ tbody tr:hover{background:var(--bg-hover);}
           <span class="field-label">Materno</span>
           <input type="text" id="auMaterno" placeholder="Apellido materno">
         </div>
-        <div class="field-group">
-          <span class="field-label">Correo*</span>
-          <input type="email" id="auCorreo" placeholder="nombre@dominio.com">
-        </div>
+        <div class="field-group"></div>
       </div>
       <div class="field-row2">
         <div class="field-group">
@@ -358,7 +362,7 @@ tbody tr:hover{background:var(--bg-hover);}
           <input type="password" id="auPassword" placeholder="••••••••">
         </div>
       </div>
-      <span class="field-hint">Pensado también para terceros sin relación previa con la empresa (ej. un auditor externo): solo necesita estos datos, no un registro de trabajador.</span>
+      <span class="field-hint">Si el correo coincide con un trabajador, su nombre se rellena solo. También sirve para terceros sin relación previa con la empresa (ej. un auditor externo): si no hay coincidencia, simplemente llena los datos a mano.</span>
     </div>
     <div class="panel-foot">
       <button class="btn-ghost" id="altaCancel">Cancelar</button>
@@ -454,6 +458,22 @@ const USUARIOS_DEMO = [
   {id_usuario:12, nombre_completo:'Luis González', email:'lgonzalez@gi-consultores.com', username:'lgonzalez'},
   {id_usuario:15, nombre_completo:'Ana Karen Ruiz Solís', email:'aruiz@gi-consultores.com', username:'aruiz'}
 ];
+
+// ---- datos de demostración: tabla "trabajadores" (independiente de usuarios) ----
+// email_empresa NO es único hoy en la BD real (confirmado en giTrabajadores.php: empladoExist()
+// solo valida RFC/CURP) — por eso "Karla Jiménez" se repite dos veces aquí a propósito, para
+// probar el aviso de "más de un match" cuando se busca por correo en el alta de usuario.
+const TRABAJADORES_DEMO = [
+  {id_trabajador:101, nombre:'Ana Karen', paterno:'Ruiz', materno:'Solís', email_empresa:'aruiz@gi-consultores.com'},
+  {id_trabajador:102, nombre:'Mario', paterno:'Contreras', materno:'León', email_empresa:'mcontreras@gi-consultores.com'},
+  {id_trabajador:103, nombre:'Karla', paterno:'Jiménez', materno:'Paz', email_empresa:'kjimenez@gi-consultores.com'},
+  {id_trabajador:104, nombre:'Karla', paterno:'Jiménez', materno:'Osorio', email_empresa:'kjimenez@gi-consultores.com'}
+];
+function buscarTrabajadoresPorCorreo(correo){
+  const c = correo.trim().toLowerCase();
+  if (!c) return [];
+  return TRABAJADORES_DEMO.filter(t => t.email_empresa.toLowerCase() === c);
+}
 
 // Simula lo que hoy ya existe en usuarios_permisos: JSON plano, sin _tipo. Ojo: no todos
 // traen "usuarios" ni el resto de las llaves — así llegan hoy los reales, y por eso el
@@ -793,13 +813,43 @@ document.getElementById('usuariosTbody').addEventListener('click', e => {
 
 // ---- Alta de usuario ----
 const altaOverlay = document.getElementById('altaOverlay');
+const auCorreoEstado = document.getElementById('auCorreoEstado');
 document.getElementById('btnAltaUsuario').addEventListener('click', () => {
   ['auNombre','auPaterno','auMaterno','auCorreo','auUsername','auPassword'].forEach(id => document.getElementById(id).value = '');
+  auCorreoEstado.textContent = '';
+  auCorreoEstado.className = 'field-hint';
   altaOverlay.classList.add('is-open');
 });
 document.getElementById('altaClose').addEventListener('click', () => altaOverlay.classList.remove('is-open'));
 document.getElementById('altaCancel').addEventListener('click', () => altaOverlay.classList.remove('is-open'));
 altaOverlay.addEventListener('click', e => { if (e.target === altaOverlay) altaOverlay.classList.remove('is-open'); });
+
+// Al salir del campo Correo, busca en "trabajadores" por ese mismo correo (email_empresa) y
+// rellena Nombre/Paterno/Materno si hay exactamente una coincidencia. Como email_empresa no es
+// único en la BD real, si hay 2+ coincidencias NO se rellena nada solo — se avisa para que se
+// revise a mano, en vez de arriesgarse a jalar los datos de la persona equivocada.
+document.getElementById('auCorreo').addEventListener('blur', () => {
+  const correo = document.getElementById('auCorreo').value.trim();
+  auCorreoEstado.textContent = '';
+  auCorreoEstado.className = 'field-hint';
+  if (!correo) return;
+
+  const matches = buscarTrabajadoresPorCorreo(correo);
+  if (matches.length === 1){
+    const t = matches[0];
+    document.getElementById('auNombre').value = t.nombre;
+    document.getElementById('auPaterno').value = t.paterno;
+    document.getElementById('auMaterno').value = t.materno;
+    auCorreoEstado.textContent = 'Coincide con un trabajador — datos rellenados, puedes ajustarlos si hace falta.';
+    auCorreoEstado.className = 'field-hint hint-ok';
+  } else if (matches.length > 1){
+    auCorreoEstado.textContent = 'Hay ' + matches.length + ' trabajadores con este correo. No se rellenó nada automático — verifica y captura los datos a mano.';
+    auCorreoEstado.className = 'field-hint hint-warn';
+  } else {
+    auCorreoEstado.textContent = 'Sin coincidencia en trabajadores — puedes llenar los datos manualmente (ej. un tercero externo).';
+    auCorreoEstado.className = 'field-hint';
+  }
+});
 
 document.getElementById('altaGuardar').addEventListener('click', () => {
   const nombre = document.getElementById('auNombre').value.trim();
@@ -881,7 +931,7 @@ function validateModuleJson(node, depth){
   const keys = Object.keys(node);
   if (keys.length === 0) return {ok:false, error:'El módulo no tiene ningún permiso dentro.'};
   for (const k of keys){
-    if (!/^[A-Za-z0-9_]{1,40}$/.test(k)) return {ok:false, error:'La llave "'+k+'" tiene caracteres no válidos (solo letras, números y guion bajo).'};
+    if (!/^[A-Za-z0-9_-]{1,40}$/.test(k)) return {ok:false, error:'La llave "'+k+'" tiene caracteres no válidos (solo letras, números, guion y guion bajo).'};
     const v = node[k];
     if (!isLeaf(v)){
       const r = validateModuleJson(v, depth+1);
@@ -1088,7 +1138,7 @@ document.getElementById('catGuardarBtn').addEventListener('click', () => {
     const clavesRaiz = Object.keys(parsed || {});
     if (clavesRaiz.length !== 1){ alert('Para un módulo nuevo, el JSON debe tener una sola llave de primer nivel: la clave del módulo. Ej: {"compras": {...}}'); return; }
     claveNuevoEnC = clavesRaiz[0];
-    if (!/^[A-Za-z0-9_]{1,40}$/.test(claveNuevoEnC)){ alert('"'+claveNuevoEnC+'" no es una llave válida (solo letras, números y guion bajo).'); return; }
+    if (!/^[A-Za-z0-9_-]{1,40}$/.test(claveNuevoEnC)){ alert('"'+claveNuevoEnC+'" no es una llave válida (solo letras, números, guion y guion bajo).'); return; }
     if (MODEL[claveNuevoEnC]) { alert('Ya existe un módulo con esa clave.'); return; }
     nombreNuevoEnC = prettyLabel(claveNuevoEnC);
     parsed = parsed[claveNuevoEnC];
