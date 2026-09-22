@@ -523,10 +523,11 @@ function countLeaves(node){
 function buildPermEditor(container, values){
 
   const moduleKeys = Object.keys(MODEL);
-  const listHtml = moduleKeys.map((k,i)=>
-    `<button type="button" class="perm-list-item${i===0?' is-active':''}" data-module="${k}">${prettyLabel(k)}</button>`
-  ).join('') +
-  `<button type="button" class="perm-list-item" data-module="__menu">Menú (acceso general)</button>`;
+  const listHtml =
+    `<button type="button" class="perm-list-item" data-module="__menu">Menú (acceso general)</button>` +
+    moduleKeys.map((k,i)=>
+      `<button type="button" class="perm-list-item${i===0?' is-active':''}" data-module="${k}">${prettyLabel(k)}</button>`
+    ).join('');
 
   container.innerHTML =
     `<div class="perm-shell">
@@ -924,11 +925,8 @@ function jsonDisponible(){ return catOpcion === 'B' || catOpcion === 'C'; }
 function builderDisponible(){ return catOpcion === 'A'; }
 
 function fillPadreOptions(){
-  const opciones = [];
-  // "Nuevo módulo" (con sus campos de nombre/clave/menú) solo existe en A y B. En C se pega
-  // en crudo, así que ahí solo tiene sentido actualizar algo que ya existe, o todo el catálogo.
-  if (catOpcion !== 'C') opciones.push({value:'', label:'— Nuevo módulo —'});
-  opciones.push(...Object.keys(MODEL).map(mk => ({value:mk, label:'Actualizar: '+prettyLabel(mk)})));
+  const opciones = [{value:'', label:'— Nuevo módulo —'}]
+    .concat(Object.keys(MODEL).map(mk => ({value:mk, label:'Actualizar: '+prettyLabel(mk)})));
   if (jsonDisponible()) opciones.push({value:OPCION_CATALOGO_COMPLETO, label:'— Catálogo completo (reemplaza TODO) —'});
   const valorPrevio = nfPadre.value;
   nfPadre.innerHTML = opciones.map(o => `<option value="${o.value}">${o.label}</option>`).join('');
@@ -936,8 +934,18 @@ function fillPadreOptions(){
   syncCatalogoFields();
 }
 function syncCatalogoFields(){
-  nfNuevoWrap.style.display = nfPadre.value === '' ? '' : 'none';
-  document.getElementById('nfJsonLabel').textContent = nfPadre.value === OPCION_CATALOGO_COMPLETO ? 'JSON completo*' : 'JSON del módulo*';
+  const esNuevoConFormulario = nfPadre.value === '' && catOpcion !== 'C';
+  nfNuevoWrap.style.display = esNuevoConFormulario ? '' : 'none';
+
+  // En C, un módulo nuevo se identifica con su propia llave dentro del JSON — no hay campos
+  // aparte, así que el nombre/clave de menú se generan solos (ver catGuardarBtn).
+  const esNuevoEnC = nfPadre.value === '' && catOpcion === 'C';
+  nfJson.placeholder = esNuevoEnC
+    ? '{"compras": {"general":"si","modulo":"si","tipos":{"nacional":"si","importacion":"sl"}}}'
+    : '{"general":"si","direccion":"si","documentos":{"modulo":"si","doctype":{"ch":"si","co":"sl","ju":"no"}}}';
+  document.getElementById('nfJsonLabel').textContent =
+    nfPadre.value === OPCION_CATALOGO_COMPLETO ? 'JSON completo*' : (esNuevoEnC ? 'JSON (con la clave del módulo como única llave)*' : 'JSON del módulo*');
+
   if (builderDisponible()) builderReset();
 }
 nfPadre.addEventListener('change', syncCatalogoFields);
@@ -952,6 +960,7 @@ function syncCatOpcionUI(){
 }
 document.querySelectorAll('#catOpcionSwitch .mode-btn').forEach(b => b.addEventListener('click', () => {
   catOpcion = b.dataset.opcion;
+  nfPadre.value = ''; // al cambiar de opción siempre se parte de "Nuevo módulo"
   syncCatOpcionUI();
 }));
 
@@ -1071,6 +1080,20 @@ document.getElementById('catGuardarBtn').addEventListener('click', () => {
     catch(e) { alert('El JSON no es válido: ' + e.message); return; }
   }
 
+  // En C, un módulo nuevo no tiene campos de nombre/clave aparte: se identifica con su propia
+  // llave de primer nivel dentro del JSON pegado (ej. {"compras": {...}}). Se desempaca aquí
+  // para que de ahí en adelante `parsed` sea el cuerpo del módulo, igual que en cualquier otro caso.
+  let claveNuevoEnC = null, nombreNuevoEnC = null;
+  if (esNuevo && catOpcion === 'C' && !esCompleto){
+    const clavesRaiz = Object.keys(parsed || {});
+    if (clavesRaiz.length !== 1){ alert('Para un módulo nuevo, el JSON debe tener una sola llave de primer nivel: la clave del módulo. Ej: {"compras": {...}}'); return; }
+    claveNuevoEnC = clavesRaiz[0];
+    if (!/^[A-Za-z0-9_]{1,40}$/.test(claveNuevoEnC)){ alert('"'+claveNuevoEnC+'" no es una llave válida (solo letras, números y guion bajo).'); return; }
+    if (MODEL[claveNuevoEnC]) { alert('Ya existe un módulo con esa clave.'); return; }
+    nombreNuevoEnC = prettyLabel(claveNuevoEnC);
+    parsed = parsed[claveNuevoEnC];
+  }
+
   if (esCompleto){
     // "menu" no es parte del catálogo (es el on/off de UN usuario, no la definición de los
     // módulos), así que se ignora si viene incluido — nunca se guarda dentro de MODEL.
@@ -1115,11 +1138,14 @@ document.getElementById('catGuardarBtn').addEventListener('click', () => {
   parsed = normalizeModuleJson(parsed);
 
   if (esNuevo){
-    const nombre = nfNombre.value.trim();
-    const clave = nfClave.value.trim();
-    const menuClave = nfMenuClave.value.trim();
+    const esC = catOpcion === 'C';
+    const nombre = esC ? nombreNuevoEnC : nfNombre.value.trim();
+    const clave = esC ? claveNuevoEnC : nfClave.value.trim();
+    // En C no se pregunta la clave de menú aparte: se genera sola, igual que ya se hace para
+    // los módulos nuevos que aparecen dentro de un "Catálogo completo".
+    const menuClave = esC ? generarClaveMenu(clave, Object.keys(MENU_LABELS)) : nfMenuClave.value.trim();
     if (!nombre || !clave){ alert('Escribe el nombre visible del módulo nuevo.'); return; }
-    if (!/^[a-z]{2,8}$/.test(menuClave)){ alert('La clave de menú debe ser de 2 a 8 letras minúsculas.'); return; }
+    if (!esC && !/^[a-z]{2,8}$/.test(menuClave)){ alert('La clave de menú debe ser de 2 a 8 letras minúsculas.'); return; }
     if (MODEL[clave]) { alert('Ya existe un módulo con esa clave.'); return; }
     if (MENU_LABELS[menuClave]) { alert('Esa clave de menú ya existe.'); return; }
 
