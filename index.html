@@ -1072,7 +1072,10 @@ function builderAdd(pathArr, esGrupo){
   let target = borrador;
   pathArr.forEach(p => { target = target[p]; });
   if (target[clave]) { alert('Ya existe un permiso con esa clave ahí.'); return; }
-  target[clave] = esGrupo ? {modulo:'no'} : 'no';
+  // Solo el grupo de primer nivel (directo bajo el módulo) lleva "modulo" como candado — así se
+  // ve en el JSON real (ej. "documentos":{modulo:"si", doctype:{...}}: "doctype" no trae su propio
+  // candado). Un grupo dentro de otro grupo ya nace sin "modulo", para no apilar candados de más.
+  target[clave] = esGrupo ? (pathArr.length === 0 ? {modulo:'no'} : {}) : 'no';
   renderBuilderTree();
 }
 function builderDel(pathArr){
