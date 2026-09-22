@@ -444,8 +444,6 @@ const SECTION_TO_MENU = Object.keys(MENU_TO_SECTION).reduce((acc,mk)=>{acc[MENU_
 // Sí/No, sin "sl" — así ya lo trata rh.page.ts en el frontend real (sl se leería como No).
 const SECCIONES_SOLO_SI_NO = ['nominas'];
 
-// Ítems de "menu" que hoy no tienen bloque propio de permisos (Contratos, Sindicatos, Reportes IA).
-const MENU_SIN_MODULO = {cont:'Contratos', sind:'Sindicatos', airep:'Reportes IA'};
 const MENU_LABELS = {empl:'Empleados', empr:'Empresas', soci:'Socios', clie:'Clientes', cont:'Contratos', arre:'Arrendamientos',
   sind:'Sindicatos', sopdoc:'Soporte Documental', oper:'Operaciones', prosp:'Comercial', rh:'Capital Humano', airep:'Reportes IA', reps:'Reportes',
   config:'Configuración'};
@@ -631,8 +629,7 @@ function buildPermEditor(container, values){
     const rows = menuKeys.map(mk => {
       const current = getVal(values, 'menu.'+mk) ?? 'no';
       const btns = ['si','no'].map(v => `<button type="button" class="acc-opt${v===current?' is-active':''}" data-value="${v}">${v==='si'?'Sí':'No'}</button>`).join('');
-      const sinModulo = MENU_SIN_MODULO[mk] ? ' <span class="new-node-tag">sin permisos propios</span>' : '';
-      return `<div class="perm-row"><span class="t-label">${MENU_LABELS[mk]}${sinModulo}</span><div class="acc-control" data-perm="menu.${mk}" data-value="${current}">${btns}</div></div>`;
+      return `<div class="perm-row"><span class="t-label">${MENU_LABELS[mk]}</span><div class="acc-control" data-perm="menu.${mk}" data-value="${current}">${btns}</div></div>`;
     }).join('');
     detailEl.innerHTML = `<div class="perm-detail-head"><span class="perm-detail-title">Menú (acceso general)</span><span class="acc-badge">${menuKeys.length} interruptores</span></div><div>${rows}</div>`;
   }
