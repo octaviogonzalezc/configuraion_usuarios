@@ -251,7 +251,7 @@ tbody tr:hover{background:var(--bg-hover);}
                   <div class="field-group" style="margin-top:14px;">
                     <span class="field-label">JSON del módulo*</span>
                     <textarea id="nfJson" rows="10" placeholder='{"general":"si","direccion":"si","documentos":{"modulo":"si","doctype":{"ch":"si","co":"sl","ju":"no"}}}'></textarea>
-                    <span class="field-hint">Pega el JSON tal cual está o va a estar en la base de datos: valores "si"/"sl"/"no" (o "todo" para un dato fijo como tipoNomina). No hace falta declarar de qué tipo es cada permiso — "modulo" y "general" siempre son Sí/No, el resto admite además "sl".</span>
+                    <span class="field-hint">Pega el JSON tal cual está o va a estar en la base de datos. Puedes traer ya los valores ("si"/"sl"/"no", o "todo" para un dato fijo como tipoNomina), o dejarlo solo con la estructura — cualquier llave que no traiga uno de esos 4 valores se guarda como "No" y queda lista para editarse. No hace falta declarar de qué tipo es cada permiso — "modulo" y "general" siempre son Sí/No, el resto admite además "sl".</span>
                   </div>
                   <button type="button" class="btn-ghost" id="nfJsonEjemplo" style="margin-top:8px;">Ver un ejemplo</button>
 
@@ -394,13 +394,17 @@ let MODEL = {
     repNomGeneral: 'no', repNomIncidencias: 'no', catGrupos: 'no', asigGrupos: 'no', cierreIncidencias: 'no',
     repNomMes: 'no', recResguardos: 'no', nomDashboard: 'no'
   },
-  reportes: {repOpeVentas: 'no', repOpeSopDoc: 'no'}
+  reportes: {repOpeVentas: 'no', repOpeSopDoc: 'no'},
+  // "Configuración" es un módulo más: quien la administra necesita dársela a sí mismo (o a
+  // quien decidan) como cualquier otro permiso, en vez de que quede siempre abierta.
+  configuracion: {usuarios: 'no', catalogo: 'no'}
 };
 
 // Liga entre el ítem del menú lateral y el módulo de permisos que habilita (no vive dentro
 // del propio JSON del módulo, porque el módulo pegado es el JSON real tal cual, sin agregados).
 const MENU_TO_SECTION = {empl:'trabajadores', empr:'empresas', soci:'socios', clie:'clientes',
-  arre:'arrendamientos', sopdoc:'sop-documental', oper:'operaciones', prosp:'prospectos', rh:'nominas', reps:'reportes'};
+  arre:'arrendamientos', sopdoc:'sop-documental', oper:'operaciones', prosp:'prospectos', rh:'nominas', reps:'reportes',
+  config:'configuracion'};
 const SECTION_TO_MENU = Object.keys(MENU_TO_SECTION).reduce((acc,mk)=>{acc[MENU_TO_SECTION[mk]]=mk; return acc;}, {});
 
 // Excepción confirmada (no es el sistema "adivinando"): en nóminas TODOS sus permisos son
@@ -410,7 +414,8 @@ const SECCIONES_SOLO_SI_NO = ['nominas'];
 // Ítems de "menu" que hoy no tienen bloque propio de permisos (Contratos, Sindicatos, Reportes IA).
 const MENU_SIN_MODULO = {cont:'Contratos', sind:'Sindicatos', airep:'Reportes IA'};
 const MENU_LABELS = {empl:'Empleados', empr:'Empresas', soci:'Socios', clie:'Clientes', cont:'Contratos', arre:'Arrendamientos',
-  sind:'Sindicatos', sopdoc:'Soporte Documental', oper:'Operaciones', prosp:'Comercial', rh:'Capital Humano', airep:'Reportes IA', reps:'Reportes'};
+  sind:'Sindicatos', sopdoc:'Soporte Documental', oper:'Operaciones', prosp:'Comercial', rh:'Capital Humano', airep:'Reportes IA', reps:'Reportes',
+  config:'Configuración'};
 
 // ---- datos de demostración: usuarios activos y sus permisos guardados ----
 let siguienteIdUsuario = 16;
@@ -829,15 +834,16 @@ const nfMenuClave = document.getElementById('nfMenuClave');
 const nfNuevoWrap = document.getElementById('nfNuevoWrap');
 const nfJson = document.getElementById('nfJson');
 
-// Valores que puede traer una hoja del módulo — los mismos 4 que ya valida el backend
-// (giTrabajadores.php: PERM_VALUES). No hace falta declarar aparte cuál es "sl": el
-// renderizador ya sabe la regla por el nombre de la llave (ver renderLeaf).
+// Valores que ya reconoce el sistema como un permiso real — los mismos 4 que ya valida el
+// backend (giTrabajadores.php: PERM_VALUES). Un módulo pegado NO tiene que traerlos ya
+// puestos: sirve igual para definir nada más la ESTRUCTURA (qué permisos existen), y lo que
+// no traiga uno de estos 4 valores se normaliza a "no" (ver normalizeModuleJson). No hace
+// falta declarar aparte cuál permiso es "sl": el renderizador ya sabe la regla por el nombre
+// de la llave (ver renderLeaf).
 const VALORES_PERMITIDOS = ['si','sl','no','todo'];
 
-// Valida el módulo completo pegado en crudo: mismas reglas que debería aplicar el backend
-// al recibir un POST /permisos/modelo. Solo revisa que la FORMA sea correcta (objeto,
-// profundidad, nombres de llave, valores conocidos) — no necesita que nadie describa de
-// qué tipo es cada permiso, porque esa parte ya no se adivina ni se declara: es fija.
+// Valida SOLO la forma del módulo pegado (objeto, profundidad, nombres de llave) — no exige
+// que los valores ya vengan en si/sl/no/todo, porque eso lo resuelve normalizeModuleJson.
 function validateModuleJson(node, depth){
   depth = depth || 0;
   if (depth > 6) return {ok:false, error:'Más de 6 niveles de profundidad.'};
@@ -847,14 +853,24 @@ function validateModuleJson(node, depth){
   for (const k of keys){
     if (!/^[A-Za-z0-9_]{1,40}$/.test(k)) return {ok:false, error:'La llave "'+k+'" tiene caracteres no válidos (solo letras, números y guion bajo).'};
     const v = node[k];
-    if (isLeaf(v)){
-      if (typeof v !== 'string' || !VALORES_PERMITIDOS.includes(v)) return {ok:false, error:'"'+k+'" vale "'+v+'"; solo se aceptan: ' + VALORES_PERMITIDOS.join(', ') + '.'};
-    } else {
+    if (!isLeaf(v)){
       const r = validateModuleJson(v, depth+1);
       if (!r.ok) return {ok:false, error:'En "'+k+'": '+r.error};
     }
   }
   return {ok:true};
+}
+
+// Deja cada hoja en un valor real (si/sl/no/todo). Lo que venga en cualquier otra cosa
+// (vacío, null, "TBD", un número...) se vuelve "no", para que de cualquier forma quede
+// listo como permiso editable desde el primer momento.
+function normalizeModuleJson(node){
+  const out = {};
+  Object.keys(node).forEach(k => {
+    const v = node[k];
+    out[k] = isLeaf(v) ? (VALORES_PERMITIDOS.includes(v) ? v : 'no') : normalizeModuleJson(v);
+  });
+  return out;
 }
 
 function slugify(str){
@@ -875,7 +891,9 @@ function syncCatalogoFields(){
 nfPadre.addEventListener('change', syncCatalogoFields);
 nfNombre.addEventListener('input', () => nfClave.value = slugify(nfNombre.value));
 document.getElementById('nfJsonEjemplo').addEventListener('click', () => {
-  nfJson.value = JSON.stringify({modulo:'si', tipos:{nacional:'si', importacion:'sl'}}, null, 2);
+  // "importacion" viene sin valor a propósito, para mostrar que también se puede pegar
+  // solo la estructura: se normaliza a "no" al guardar.
+  nfJson.value = JSON.stringify({modulo:'si', tipos:{nacional:'si', importacion:''}}, null, 2);
 });
 
 function resetCatalogoForm(){
@@ -913,6 +931,7 @@ document.getElementById('catGuardarBtn').addEventListener('click', () => {
   catch(e) { alert('El JSON no es válido: ' + e.message); return; }
   const check = validateModuleJson(parsed);
   if (!check.ok){ alert('El módulo no pasó la validación:\n' + check.error); return; }
+  parsed = normalizeModuleJson(parsed);
 
   if (esNuevo){
     const nombre = nfNombre.value.trim();
