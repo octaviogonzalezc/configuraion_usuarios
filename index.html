@@ -909,22 +909,26 @@ const OPCION_CATALOGO_COMPLETO = '__full__';
 
 // ============================================================================
 // Las 3 opciones de captura, para comparar (todas guardan en el mismo MODEL):
-//   A) Solo formulario   — constructor a puros clics, sin escribir JSON.
-//   B) Formulario + JSON — se muestran los dos juntos; si llenas el JSON, se usa
-//                          ese; si lo dejas vacío, se usa lo que armaste con clics.
-//   C) Solo JSON         — un recuadro liso para pegar el módulo (o el catálogo
-//                          completo) en crudo.
+//   A) Solo formulario   — constructor a puros clics, sin escribir JSON. Sin
+//                          "Catálogo completo" (eso es puro pegado de texto).
+//   B) Formulario + JSON — campos de nombre/clave/menú para el módulo nuevo
+//                          (igual que A), pero la estructura se pega en JSON
+//                          en vez de armarse a clics.
+//   C) Solo JSON         — un recuadro liso para pegar el módulo. Sin campos
+//                          de "módulo nuevo": aquí solo se actualiza algo que
+//                          ya existe, o se reemplaza el catálogo completo.
 // ============================================================================
 let catOpcion = 'C'; // 'A' | 'B' | 'C'
 
 function jsonDisponible(){ return catOpcion === 'B' || catOpcion === 'C'; }
-function builderDisponible(){ return catOpcion === 'A' || catOpcion === 'B'; }
+function builderDisponible(){ return catOpcion === 'A'; }
 
 function fillPadreOptions(){
-  const opciones = [{value:'', label:'— Nuevo módulo —'}]
-    .concat(Object.keys(MODEL).map(mk => ({value:mk, label:'Actualizar: '+prettyLabel(mk)})));
-  // "Catálogo completo" es un pegado de texto, así que solo tiene sentido cuando el JSON está
-  // disponible (Opción C, o B en modo Pegar JSON) — con el formulario no se puede armar de un jalón.
+  const opciones = [];
+  // "Nuevo módulo" (con sus campos de nombre/clave/menú) solo existe en A y B. En C se pega
+  // en crudo, así que ahí solo tiene sentido actualizar algo que ya existe, o todo el catálogo.
+  if (catOpcion !== 'C') opciones.push({value:'', label:'— Nuevo módulo —'});
+  opciones.push(...Object.keys(MODEL).map(mk => ({value:mk, label:'Actualizar: '+prettyLabel(mk)})));
   if (jsonDisponible()) opciones.push({value:OPCION_CATALOGO_COMPLETO, label:'— Catálogo completo (reemplaza TODO) —'});
   const valorPrevio = nfPadre.value;
   nfPadre.innerHTML = opciones.map(o => `<option value="${o.value}">${o.label}</option>`).join('');
@@ -1053,9 +1057,7 @@ function renderCatalogTree(){
 }
 
 document.getElementById('catGuardarBtn').addEventListener('click', () => {
-  // En la Opción B están los dos a la vista: si escribiste algo en el JSON, se usa eso;
-  // si lo dejaste vacío, se usa lo que armaste con los botones del constructor.
-  const usandoBuilder = builderDisponible() && !(jsonDisponible() && nfJson.value.trim() !== '');
+  const usandoBuilder = builderDisponible(); // solo la Opción A tiene constructor visual
   const padrePath = nfPadre.value;
   const esNuevo = padrePath === '';
   const esCompleto = !usandoBuilder && padrePath === OPCION_CATALOGO_COMPLETO;
