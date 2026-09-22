@@ -236,27 +236,17 @@ tbody tr:hover{background:var(--bg-hover);}
                 </div>
                 <div class="cat-form">
                   <div class="field-group">
-                    <span class="field-label">Cómo capturarlo — 3 opciones para comparar</span>
+                    <span class="field-label">Cómo capturarlo</span>
                     <div class="mode-switch" id="catOpcionSwitch">
                       <button type="button" class="mode-btn" data-opcion="A">A · Solo formulario</button>
                       <button type="button" class="mode-btn" data-opcion="B">B · Formulario + JSON</button>
                       <button type="button" class="mode-btn is-active" data-opcion="C">C · Solo JSON</button>
-                    </div>
-                    <span class="field-hint">Las tres guardan en el mismo catálogo — cambiar de opción no borra lo que ya agregaste. Es nada más para comparar y decidir cuál se queda.</span>
-                  </div>
-
-                  <div class="field-group" id="catSubModoWrap" style="display:none;margin-top:14px;">
-                    <span class="field-label">Para éste permiso, usar</span>
-                    <div class="mode-switch" id="catSubModoSwitch">
-                      <button type="button" class="mode-btn is-active" data-submodo="builder">Formulario</button>
-                      <button type="button" class="mode-btn" data-submodo="json">Pegar JSON</button>
                     </div>
                   </div>
 
                   <div class="field-group" style="margin-top:14px;">
                     <span class="field-label">Dónde va</span>
                     <select id="nfPadre"></select>
-                    <span class="field-hint">Un módulo nuevo aparece en el menú; si eliges uno existente, reemplaza su estructura completa por la que armes o pegues abajo.</span>
                   </div>
 
                   <div id="nfNuevoWrap">
@@ -267,16 +257,14 @@ tbody tr:hover{background:var(--bg-hover);}
                     <div class="field-group" style="margin-top:14px;">
                       <span class="field-label">Clave del módulo*</span>
                       <input type="text" id="nfClave" placeholder="compras" readonly>
-                      <span class="field-hint">Se genera del nombre. Es la llave de primer nivel en el JSON de permisos.</span>
                     </div>
                     <div class="field-group" style="margin-top:14px;">
                       <span class="field-label">Clave de menú (2-8 letras)*</span>
                       <input type="text" id="nfMenuClave" placeholder="Ej. comp">
-                      <span class="field-hint">Es el candado que decide si el módulo aparece en el menú lateral para el usuario.</span>
                     </div>
                   </div>
 
-                  <!-- Opción A, y Opción B en modo Formulario: constructor a puros clics, sin escribir JSON. -->
+                  <!-- Opción A y Opción B: constructor a puros clics, sin escribir JSON. -->
                   <div id="catBuilderWrap" style="margin-top:14px;">
                     <div class="field-group">
                       <span class="field-label">Estructura</span>
@@ -285,18 +273,15 @@ tbody tr:hover{background:var(--bg-hover);}
                         <button type="button" class="btn-ghost" id="catBuilderAddGroupRoot">+ Grupo con candado</button>
                       </div>
                       <div id="catBuilderTree" class="builder-tree"></div>
-                      <span class="field-hint">Sí/No o Sí/sl/No se decide solo por el nombre ("modulo" y "general" son Sí/No, el resto admite "sl") — no hay que elegirlo aquí.</span>
                     </div>
                   </div>
 
-                  <!-- Opción C, y Opción B en modo Pegar JSON. -->
+                  <!-- Opción B y Opción C: recuadro liso para pegar el JSON. -->
                   <div id="catJsonWrap" style="display:none;margin-top:14px;">
                     <div class="field-group">
-                      <span class="field-label" id="nfJsonLabel">JSON del módulo*</span>
+                      <span class="field-label" id="nfJsonLabel">JSON</span>
                       <textarea id="nfJson" rows="10" placeholder='{"general":"si","direccion":"si","documentos":{"modulo":"si","doctype":{"ch":"si","co":"sl","ju":"no"}}}'></textarea>
-                      <span class="field-hint">Pega el JSON tal cual está o va a estar en la base de datos. Puedes traer ya los valores ("si"/"sl"/"no", o "todo" para un dato fijo como tipoNomina), o dejarlo solo con la estructura — cualquier llave que no traiga uno de esos 4 valores se guarda como "No" y queda lista para editarse. No hace falta declarar de qué tipo es cada permiso — "modulo" y "general" siempre son Sí/No, el resto admite además "sl".</span>
                     </div>
-                    <button type="button" class="btn-ghost" id="nfJsonEjemplo" style="margin-top:8px;">Ver un ejemplo</button>
                   </div>
 
                   <div style="margin-top:18px;">
@@ -924,15 +909,16 @@ const OPCION_CATALOGO_COMPLETO = '__full__';
 
 // ============================================================================
 // Las 3 opciones de captura, para comparar (todas guardan en el mismo MODEL):
-//   A) Solo formulario  — constructor a puros clics, sin escribir JSON.
-//   B) Formulario + JSON — igual que A o C, se elige por cada permiso.
-//   C) Solo JSON        — pegar el módulo (o el catálogo completo) en crudo.
+//   A) Solo formulario   — constructor a puros clics, sin escribir JSON.
+//   B) Formulario + JSON — se muestran los dos juntos; si llenas el JSON, se usa
+//                          ese; si lo dejas vacío, se usa lo que armaste con clics.
+//   C) Solo JSON         — un recuadro liso para pegar el módulo (o el catálogo
+//                          completo) en crudo.
 // ============================================================================
-let catOpcion = 'C';        // 'A' | 'B' | 'C'
-let catSubModo = 'builder'; // solo aplica dentro de la Opción B: 'builder' | 'json'
+let catOpcion = 'C'; // 'A' | 'B' | 'C'
 
-function jsonDisponible(){ return catOpcion === 'C' || (catOpcion === 'B' && catSubModo === 'json'); }
-function builderDisponible(){ return catOpcion === 'A' || (catOpcion === 'B' && catSubModo === 'builder'); }
+function jsonDisponible(){ return catOpcion === 'B' || catOpcion === 'C'; }
+function builderDisponible(){ return catOpcion === 'A' || catOpcion === 'B'; }
 
 function fillPadreOptions(){
   const opciones = [{value:'', label:'— Nuevo módulo —'}]
@@ -955,9 +941,6 @@ nfNombre.addEventListener('input', () => nfClave.value = slugify(nfNombre.value)
 
 function syncCatOpcionUI(){
   document.querySelectorAll('#catOpcionSwitch .mode-btn').forEach(b => b.classList.toggle('is-active', b.dataset.opcion === catOpcion));
-  document.getElementById('catSubModoWrap').style.display = catOpcion === 'B' ? '' : 'none';
-  document.querySelectorAll('#catSubModoSwitch .mode-btn').forEach(b => b.classList.toggle('is-active', b.dataset.submodo === catSubModo));
-
   document.getElementById('catBuilderWrap').style.display = builderDisponible() ? '' : 'none';
   document.getElementById('catJsonWrap').style.display = jsonDisponible() ? '' : 'none';
 
@@ -965,15 +948,10 @@ function syncCatOpcionUI(){
 }
 document.querySelectorAll('#catOpcionSwitch .mode-btn').forEach(b => b.addEventListener('click', () => {
   catOpcion = b.dataset.opcion;
-  if (!jsonDisponible() && !builderDisponible()) catSubModo = 'builder'; // no debería pasar, por seguridad
-  syncCatOpcionUI();
-}));
-document.querySelectorAll('#catSubModoSwitch .mode-btn').forEach(b => b.addEventListener('click', () => {
-  catSubModo = b.dataset.submodo;
   syncCatOpcionUI();
 }));
 
-// ---- Opción A / Opción B en modo Formulario: constructor visual, sin escribir JSON ----
+// ---- Opción A y Opción B: constructor visual, sin escribir JSON ----
 // Cada permiso nace "no" (o {modulo:'no'} si es grupo); Sí/No vs Sí/sl/No lo decide el motor
 // por el nombre de la llave, igual que en cualquier otro lado — no hay que elegirlo aquí.
 let borrador = {};
@@ -1035,22 +1013,6 @@ document.getElementById('catBuilderTree').addEventListener('click', e => {
   if (addGroup) return builderAdd(addGroup.dataset.baddgroup.split('.'), true);
   if (del) return builderDel(del.dataset.bdel.split('.'));
 });
-document.getElementById('nfJsonEjemplo').addEventListener('click', () => {
-  if (nfPadre.value === OPCION_CATALOGO_COMPLETO){
-    // Ejemplo de catálogo completo: varios módulos de un jalón, más "menu" (se ignora al guardar).
-    nfJson.value = JSON.stringify({
-      menu: {empl:'si', empr:'si', comp:'si'},
-      trabajadores: MODEL.trabajadores,
-      empresas: MODEL.empresas,
-      compras: {general:'si', modulo:'si', tipos:{nacional:'si', importacion:''}}
-    }, null, 2);
-  } else {
-    // "importacion" viene sin valor a propósito, para mostrar que también se puede pegar
-    // solo la estructura: se normaliza a "no" al guardar.
-    nfJson.value = JSON.stringify({modulo:'si', tipos:{nacional:'si', importacion:''}}, null, 2);
-  }
-});
-
 // Genera una clave de menú corta y única para un módulo nuevo que aparece dentro de un
 // pegado de "Catálogo completo" (ahí no se pregunta la clave de menú módulo por módulo).
 // Es un valor de trabajo para esta demo: en el sistema real, a un módulo nuevo real
@@ -1091,7 +1053,9 @@ function renderCatalogTree(){
 }
 
 document.getElementById('catGuardarBtn').addEventListener('click', () => {
-  const usandoBuilder = builderDisponible();
+  // En la Opción B están los dos a la vista: si escribiste algo en el JSON, se usa eso;
+  // si lo dejaste vacío, se usa lo que armaste con los botones del constructor.
+  const usandoBuilder = builderDisponible() && !(jsonDisponible() && nfJson.value.trim() !== '');
   const padrePath = nfPadre.value;
   const esNuevo = padrePath === '';
   const esCompleto = !usandoBuilder && padrePath === OPCION_CATALOGO_COMPLETO;
