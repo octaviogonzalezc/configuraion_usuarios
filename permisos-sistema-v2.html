@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Configuración · Usuarios y Permisos (mockup funcional) · SIGIC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg-topbar:#2b2e33; --bg-sidebar:#29292b; --bg-content:#121214; --bg-panel:#2b2e33;
+  --bg-breadcrumb:#98988f; --bg-row:#121214; --bg-row-alt:#19191b; --bg-hover:#313134;
+  --bg-active:#1c1c1e; --bg-input:#1c1c1e; --bg-field:#c4c4be; --field-text:#3a3a3a;
+  --field-placeholder:#6b6b66; --field-border:rgba(0,0,0,.22); --border:#3a3a3c; --border-soft:#2c2c2e;
+  --text-primary:#f0f1f2; --text-secondary:#9a9a9b; --text-muted:#67676a; --text-on-breadcrumb:#404040;
+  --topbar-icon:#cea759; --accent-gold:#b28240; --accent-gold-dim:#96692f; --accent-gold-soft:rgba(178,130,64,.16);
+  --accent-green:#046546; --accent-green-hover:#035a3c; --accent-green-text:#5fcf9c; --accent-red:#c1584f; --accent-red-hover:#a54941;
+  --accent-blue:#3f7bb0; --accent-blue-text:#7db6e8; --focus-ring:#b28240; color-scheme: dark;
+}
+*{box-sizing:border-box;} html,body{height:100%;}
+body{margin:0;background:var(--bg-content);color:var(--text-primary);font-family:"Inter",system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+.app{display:flex;flex-direction:column;min-height:100vh;}
+.topbar{display:flex;align-items:center;justify-content:space-between;height:60px;flex:0 0 auto;padding:0 22px;background:var(--bg-topbar);border-bottom:1px solid var(--border-soft);}
+.brand{display:flex;align-items:center;gap:6px;color:var(--accent-gold);font-weight:800;font-size:1.2rem;}
+.switch{position:relative;width:38px;height:20px;flex:0 0 auto;}
+.switch input{opacity:0;width:0;height:0;}
+.switch .track{position:absolute;inset:0;background:#4a4a4c;border-radius:20px;cursor:pointer;transition:background .15s;}
+.switch input:checked + .track{background:var(--accent-green);}
+.switch .thumb{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#eee;transition:left .15s;}
+.switch input:checked ~ .thumb{left:20px;}
+.body{display:flex;flex:1 1 auto;min-height:0;}
+.sidebar{flex:0 0 250px;background:var(--bg-sidebar);border-right:1px solid var(--border-soft);display:flex;flex-direction:column;padding:16px 12px;overflow-y:auto;}
+.user-block{padding:4px 10px 16px;border-bottom:1px solid var(--border-soft);margin-bottom:8px;}
+.user-name{font-weight:700;font-size:1rem;}
+.user-email{font-size:.75rem;color:var(--text-muted);margin-top:2px;}
+nav.navlist{display:flex;flex-direction:column;gap:2px;}
+.navitem{display:flex;align-items:center;justify-content:space-between;padding:11px 12px;border-radius:4px;border-left:3px solid transparent;color:var(--text-secondary);font-weight:600;font-size:.92rem;cursor:pointer;background:transparent;border-top:none;border-right:none;border-bottom:none;width:100%;text-align:left;transition:background .15s,color .15s,border-color .15s;}
+.navitem:hover{background:var(--bg-hover);color:var(--text-primary);}
+.navitem.is-active{background:var(--bg-active);color:var(--text-primary);border-left-color:var(--accent-gold);}
+.content{flex:1 1 auto;min-width:0;padding:20px 24px 40px;overflow-y:auto;}
+.breadcrumb-bar{display:flex;align-items:center;gap:10px;background:var(--bg-breadcrumb);color:var(--text-on-breadcrumb);border-radius:4px;padding:12px 16px;font-weight:600;font-size:.95rem;margin-bottom:16px;}
+.crumb-dim{opacity:.6;font-weight:500;}
+.panel{background:var(--bg-row);border:1px solid var(--border-soft);border-radius:4px;overflow:hidden;}
+.page{display:none;} .page.is-active{display:block;}
+/* Toolbar / tabla listado */
+.toolbar{display:flex;align-items:center;gap:8px;padding:14px 18px;border-bottom:1px solid var(--border-soft);flex-wrap:wrap;}
+.filter-input{flex:1 1 220px;display:flex;align-items:center;gap:8px;background:var(--bg-field);border:1px solid var(--field-border);border-radius:4px;padding:9px 12px;}
+.filter-input input{background:none;border:none;outline:none;color:var(--field-text);font-size:.85rem;width:100%;font-family:inherit;}
+.btn-add{display:inline-flex;align-items:center;gap:6px;background:var(--accent-green);color:#f4fff9;border:none;padding:9px 18px;border-radius:4px;font-weight:700;font-size:.82rem;letter-spacing:.02em;text-transform:uppercase;cursor:pointer;white-space:nowrap;}
+.btn-add:hover{background:var(--accent-green-hover);}
+table{width:100%;border-collapse:collapse;}
+thead th{text-align:left;font-size:.66rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted);padding:11px 18px;border-bottom:1px solid var(--border-soft);}
+tbody td{padding:12px 18px;font-size:.86rem;border-bottom:1px solid var(--border-soft);}
+tbody tr:nth-child(even){background:var(--bg-row-alt);}
+tbody tr:hover{background:var(--bg-hover);}
+.cell-id{color:var(--text-muted);font-family:ui-monospace,monospace;font-size:.78rem;}
+.cell-actions{text-align:right;}
+.row-actions{display:inline-flex;align-items:center;gap:6px;}
+.btn-icon-sq{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:4px;border:none;cursor:pointer;}
+.btn-perm{background:var(--accent-gold);color:#241a0d;} .btn-perm:hover{background:var(--accent-gold-dim);}
+.btn-baja{background:var(--bg-input);color:var(--accent-red);border:1px solid var(--border);} .btn-baja:hover{background:var(--accent-red);color:#fff;}
+.sin-permisos-tag{background:rgba(63,123,176,.22);color:var(--accent-blue-text);font-size:.62rem;font-weight:800;padding:2px 6px;border-radius:5px;margin-left:8px;text-transform:uppercase;}
+.foot-note{padding:12px 18px;color:var(--text-muted);font-size:.78rem;}
+.ti-gate-msg{padding:60px 20px;text-align:center;color:var(--text-muted);}
+.ti-gate-msg svg{color:var(--accent-gold);margin-bottom:12px;}
+/* Tabs */
+.tabs-bar{display:flex;gap:3px;overflow-x:auto;background:var(--bg-panel);border-bottom:1px solid var(--border-soft);padding:8px 10px;}
+.tab-btn{flex:0 0 auto;padding:9px 15px;border-radius:4px;border:none;background:transparent;color:var(--text-secondary);font-weight:600;font-size:.82rem;cursor:pointer;white-space:nowrap;}
+.tab-btn:hover{background:var(--bg-hover);color:var(--text-primary);}
+.tab-btn.is-active{background:var(--bg-field);color:var(--field-text);}
+.tab-panel{display:none;} .tab-panel.is-active{display:block;}
+.panel-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 18px;border-top:1px solid var(--border-soft);}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text-secondary);padding:9px 15px;border-radius:4px;font-weight:600;font-size:.84rem;cursor:pointer;}
+.btn-ghost:hover{background:var(--bg-hover);color:var(--text-primary);}
+.btn-save{background:var(--accent-green);color:#f4fff9;border:none;padding:9px 17px;border-radius:4px;font-weight:700;font-size:.84rem;cursor:pointer;}
+.btn-save:hover{background:var(--accent-green-hover);}
+.btn-save:disabled{opacity:.5;cursor:not-allowed;}
+/* Editor de permisos */
+.perm-shell{display:flex;align-items:stretch;min-height:380px;}
+.perm-list{flex:0 0 220px;border-right:1px solid var(--border-soft);display:flex;flex-direction:column;padding:10px;gap:2px;overflow-y:auto;}
+.perm-list-item{display:flex;align-items:center;padding:10px 12px;border-radius:4px;border-left:3px solid transparent;border:none;background:transparent;width:100%;text-align:left;color:var(--text-secondary);font-weight:600;font-size:.84rem;cursor:pointer;}
+.perm-list-item:hover{background:var(--bg-hover);color:var(--text-primary);}
+.perm-list-item.is-active{background:var(--bg-active);color:var(--text-primary);border-left-color:var(--accent-gold);}
+.perm-list-item.is-hidden{display:none;}
+.perm-detail{flex:1 1 auto;min-width:0;padding:16px 20px 20px;overflow-y:auto;}
+.perm-detail-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:10px;margin-bottom:4px;border-bottom:1px solid var(--border-soft);}
+.perm-detail-title{font-weight:700;font-size:.96rem;}
+.acc-badge{background:var(--bg-input);color:var(--text-secondary);font-size:.64rem;font-weight:700;padding:2px 7px;border-radius:5px;white-space:nowrap;}
+.sub-label{color:var(--accent-gold);font-size:.66rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin:12px 0 4px;}
+.sub-list{padding-left:16px;}
+.perm-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:8px 0;border-bottom:1px solid var(--border-soft);}
+.perm-row:last-child{border-bottom:none;}
+.perm-row .t-label{font-size:.84rem;font-weight:500;}
+.perm-row-main .t-label{font-weight:700;}
+.acc-control{display:inline-flex;gap:4px;flex:0 0 auto;}
+.acc-opt{background:var(--bg-input);border:1px solid var(--border);color:var(--text-muted);font-size:.66rem;font-weight:700;letter-spacing:.02em;padding:5px 9px;border-radius:4px;cursor:pointer;font-family:inherit;white-space:nowrap;}
+.acc-opt:hover{color:var(--text-secondary);}
+.acc-opt.is-active[data-value="si"]{background:rgba(4,101,70,.24);color:var(--accent-green-text);border-color:transparent;}
+.acc-opt.is-active[data-value="sl"]{background:var(--accent-gold-soft);color:var(--accent-gold);border-color:transparent;}
+.acc-opt.is-active[data-value="no"]{background:var(--bg-hover);color:var(--text-secondary);border-color:transparent;}
+.sel-eleccion{background:var(--bg-input);border:1px solid var(--border);color:var(--text-primary);font-size:.76rem;font-weight:600;padding:6px 8px;border-radius:4px;font-family:inherit;}
+.sub-list-wrap{overflow:hidden;max-height:1400px;opacity:1;transition:max-height .2s ease,opacity .15s ease,margin .2s ease;}
+.sub-list-wrap.is-hidden{max-height:0;opacity:0;margin:0;pointer-events:none;}
+.sub-empty-hint{display:none;color:var(--text-muted);font-size:.74rem;font-style:italic;padding:2px 0 4px;}
+.sub-list-wrap.is-hidden + .sub-empty-hint{display:block;}
+.new-node-tag{background:rgba(63,123,176,.22);color:var(--accent-blue-text);font-size:.6rem;font-weight:800;padding:2px 6px;border-radius:5px;margin-left:8px;text-transform:uppercase;letter-spacing:.03em;}
+/* Catálogo (pestaña, ya no modal) */
+.cat-shell{display:flex;gap:0;align-items:stretch;min-height:420px;}
+.cat-tree{flex:0 0 260px;border-right:1px solid var(--border-soft);padding:16px 18px;overflow-y:auto;font-size:.8rem;}
+.cat-tree-title{font-weight:700;font-size:.86rem;margin-bottom:10px;}
+.cat-tree ul{list-style:none;margin:0;padding-left:14px;}
+.cat-tree > ul{padding-left:0;}
+.cat-tree li{padding:3px 0;color:var(--text-secondary);}
+.cat-tree .node-modulo{color:var(--text-primary);font-weight:700;}
+.cat-tree .node-tipo{color:var(--text-muted);font-size:.72rem;margin-left:6px;}
+.cat-form{flex:1 1 auto;padding:16px 20px 20px;overflow-y:auto;}
+/* Overlay / modales */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:stretch;justify-content:flex-end;z-index:70;}
+.overlay.is-open{display:flex;}
+.overlay.center{align-items:center;justify-content:center;}
+.drawer{width:min(720px,92vw);background:var(--bg-content);border-left:1px solid var(--border-soft);box-shadow:0 24px 60px -12px rgba(0,0,0,.55);display:flex;flex-direction:column;height:100%;}
+.modal-box{width:min(480px,92vw);background:var(--bg-content);border:1px solid var(--border-soft);border-radius:6px;box-shadow:0 24px 60px -12px rgba(0,0,0,.55);display:flex;flex-direction:column;max-height:88vh;}
+.drawer-head,.modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:18px 20px;border-bottom:1px solid var(--border-soft);background:var(--bg-panel);flex:0 0 auto;}
+.drawer-title,.modal-title{font-weight:700;font-size:1.02rem;}
+.drawer-sub{font-size:.78rem;color:var(--text-muted);margin-top:3px;}
+.drawer-body,.modal-body{flex:1 1 auto;overflow-y:auto;}
+.modal-body{padding:18px 20px;display:flex;flex-direction:column;gap:14px;}
+.icon-btn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:4px;border:none;background:transparent;color:var(--text-secondary);cursor:pointer;}
+.icon-btn:hover{background:var(--bg-hover);color:var(--text-primary);}
+.field-group{display:flex;flex-direction:column;gap:6px;}
+.field-row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.field-label{font-size:.68rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text-muted);}
+.field-group input[type=text], .field-group input[type=email], .field-group input[type=password], .field-group select, .field-group textarea{background:var(--bg-input);border:1px solid var(--border);color:var(--text-primary);font-size:.86rem;padding:9px 10px;border-radius:4px;font-family:inherit;}
+.field-group textarea{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.8rem;resize:vertical;}
+.field-hint{font-size:.72rem;color:var(--text-muted);}
+.mode-switch{display:inline-flex;gap:4px;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;padding:3px;width:fit-content;}
+.mode-btn{background:transparent;border:none;color:var(--text-secondary);font-size:.78rem;font-weight:700;padding:6px 12px;border-radius:4px;cursor:pointer;font-family:inherit;}
+.mode-btn.is-active{background:var(--accent-gold-soft);color:var(--accent-gold);}
+.check-row2{display:flex;align-items:center;gap:8px;font-size:.84rem;}
+.toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,12px);background:#16321f;border:1px solid rgba(47,157,108,.5);color:#d7fce8;padding:11px 18px;border-radius:9px;font-size:.85rem;font-weight:600;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:80;}
+.toast.is-shown{opacity:1;transform:translate(-50%,0);}
+@media (max-width:760px){ .sidebar{position:fixed;top:60px;bottom:0;left:0;z-index:40;transform:translateX(-100%);} .content{padding:14px;} .perm-shell,.cat-shell{flex-direction:column;} .field-row2{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16 3 6 12l10 9V3Z"/></svg>
+      SIGIC
+    </div>
+  </header>
+
+  <div class="body">
+    <aside class="sidebar">
+      <div class="user-block">
+        <div class="user-name">José José</div>
+        <div class="user-email">jose.jose@gi-consultores.com</div>
+      </div>
+      <nav class="navlist" id="navlist">
+        <button class="navitem is-active" data-page="empleados">Empleados</button>
+        <a class="navitem" href="#">Empresas</a>
+        <a class="navitem" href="#">Socios</a>
+        <a class="navitem" href="#">Clientes</a>
+        <a class="navitem" href="#">Capital Humano</a>
+        <a class="navitem" href="#">Reportes</a>
+        <button class="navitem" data-page="config">Configuración</button>
+      </nav>
+    </aside>
+
+    <main class="content">
+
+      <!-- ============ PÁGINA: EMPLEADOS (no es el foco de éste mockup) ============ -->
+      <div class="page is-active" id="page-empleados">
+        <div class="breadcrumb-bar">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          <span>Inicio <span class="crumb-dim">›</span> Empleados</span>
+        </div>
+        <div class="panel">
+          <div class="ti-gate-msg">
+            <div>El listado de empleados no forma parte de éste mockup. Ve a <b>Configuración</b>, en la parte de abajo del menú.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ PÁGINA: CONFIGURACIÓN — Usuarios y Catálogo de permisos ============ -->
+      <div class="page" id="page-config">
+        <div class="breadcrumb-bar">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          <span>Inicio <span class="crumb-dim">›</span> Configuración</span>
+        </div>
+
+        <div id="tiContent">
+          <div class="panel">
+            <div class="tabs-bar">
+              <button class="tab-btn is-active" data-ctab="usuarios">Usuarios</button>
+              <button class="tab-btn" data-ctab="catalogo">Catálogo de módulos</button>
+            </div>
+
+            <!-- ---- Pestaña Usuarios ---- -->
+            <div class="tab-panel is-active" data-ctab-panel="usuarios">
+              <div class="toolbar">
+                <label class="filter-input">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                  <input type="text" id="filtroUsuarios" placeholder="Filtrar por nombre, correo o usuario">
+                </label>
+                <button class="btn-add" id="btnAltaUsuario">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
+                  Agregar
+                </button>
+              </div>
+              <div class="table-scroll">
+                <table>
+                  <thead><tr><th>ID</th><th>Nombre</th><th>Correo</th><th>Usuario</th><th class="cell-actions">Acciones</th></tr></thead>
+                  <tbody id="usuariosTbody"></tbody>
+                </table>
+              </div>
+              <div class="foot-note" id="usuariosFootNote"></div>
+            </div>
+
+            <!-- ---- Pestaña Catálogo de módulos (antes era un modal) ---- -->
+            <div class="tab-panel" data-ctab-panel="catalogo">
+              <div class="cat-shell">
+                <div class="cat-tree">
+                  <div class="cat-tree-title">Catálogo actual</div>
+                  <div id="catTree"></div>
+                </div>
+                <div class="cat-form">
+                  <div class="field-group">
+                    <span class="field-label">Dónde va</span>
+                    <select id="nfPadre"></select>
+                    <span class="field-hint">Un módulo nuevo aparece en el menú; si eliges uno existente, reemplaza su estructura completa por la que pegues abajo.</span>
+                  </div>
+
+                  <div id="nfNuevoWrap">
+                    <div class="field-group" style="margin-top:14px;">
+                      <span class="field-label">Nombre visible*</span>
+                      <input type="text" id="nfNombre" placeholder="Ej. Compras">
+                    </div>
+                    <div class="field-group" style="margin-top:14px;">
+                      <span class="field-label">Clave del módulo*</span>
+                      <input type="text" id="nfClave" placeholder="compras" readonly>
+                      <span class="field-hint">Se genera del nombre. Es la llave de primer nivel en el JSON de permisos.</span>
+                    </div>
+                    <div class="field-group" style="margin-top:14px;">
+                      <span class="field-label">Clave de menú (2-8 letras)*</span>
+                      <input type="text" id="nfMenuClave" placeholder="Ej. comp">
+                      <span class="field-hint">Es el candado que decide si el módulo aparece en el menú lateral para el usuario.</span>
+                    </div>
+                  </div>
+
+                  <div class="field-group" style="margin-top:14px;">
+                    <span class="field-label">JSON del módulo*</span>
+                    <textarea id="nfJson" rows="10" placeholder='{"general":"si","direccion":"si","documentos":{"modulo":"si","doctype":{"ch":"si","co":"sl","ju":"no"}}}'></textarea>
+                    <span class="field-hint">Pega el JSON tal cual está o va a estar en la base de datos: valores "si"/"sl"/"no" (o "todo" para un dato fijo como tipoNomina). No hace falta declarar de qué tipo es cada permiso — "modulo" y "general" siempre son Sí/No, el resto admite además "sl".</span>
+                  </div>
+                  <button type="button" class="btn-ghost" id="nfJsonEjemplo" style="margin-top:8px;">Ver un ejemplo</button>
+
+                  <div style="margin-top:18px;">
+                    <button type="button" class="btn-save" id="catGuardarBtn">Agregar al catálogo</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- Drawer: editor de permisos por usuario -->
+<div class="overlay" id="drawerOverlay">
+  <div class="drawer">
+    <div class="drawer-head">
+      <div>
+        <div class="drawer-title" id="drawerTitle">Permisos</div>
+        <div class="drawer-sub" id="drawerSub"></div>
+      </div>
+      <button class="icon-btn" id="drawerClose" aria-label="Cerrar">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="drawer-body"><div id="editorPermisos"></div></div>
+    <div class="panel-foot">
+      <button class="btn-ghost" id="drawerCancel">Cancelar</button>
+      <button class="btn-save" id="drawerSave">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: alta de usuario (por correo) -->
+<div class="overlay center" id="altaOverlay">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="modal-title">Agregar usuario</div>
+      <button class="icon-btn" id="altaClose" aria-label="Cerrar">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="field-row2">
+        <div class="field-group">
+          <span class="field-label">Nombre*</span>
+          <input type="text" id="auNombre" placeholder="Nombre(s)">
+        </div>
+        <div class="field-group">
+          <span class="field-label">Paterno</span>
+          <input type="text" id="auPaterno" placeholder="Apellido paterno">
+        </div>
+      </div>
+      <div class="field-row2">
+        <div class="field-group">
+          <span class="field-label">Materno</span>
+          <input type="text" id="auMaterno" placeholder="Apellido materno">
+        </div>
+        <div class="field-group">
+          <span class="field-label">Correo*</span>
+          <input type="email" id="auCorreo" placeholder="nombre@dominio.com">
+        </div>
+      </div>
+      <div class="field-row2">
+        <div class="field-group">
+          <span class="field-label">Usuario*</span>
+          <input type="text" id="auUsername" placeholder="usuario.acceso">
+        </div>
+        <div class="field-group">
+          <span class="field-label">Contraseña*</span>
+          <input type="password" id="auPassword" placeholder="••••••••">
+        </div>
+      </div>
+      <span class="field-hint">Pensado también para terceros sin relación previa con la empresa (ej. un auditor externo): solo necesita estos datos, no un registro de trabajador.</span>
+    </div>
+    <div class="panel-foot">
+      <button class="btn-ghost" id="altaCancel">Cancelar</button>
+      <button class="btn-save" id="altaGuardar">Crear usuario</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+
+// ============================================================================
+// MODELO (catálogo): mismo formato PLANO que ya usa el backend (columna
+// usuarios_permisos.permisos) — sin ninguna etiqueta agregada. El sistema
+// decide cómo pintar cada permiso por su NOMBRE, sin que nadie tenga que
+// declararlo aparte:
+//
+//   - la llave "modulo" es el candado de sus hermanas (Sí/No).
+//   - la llave "general" es Sí/No.
+//   - "menu" completo (más abajo) es Sí/No.
+//   - "nominas" completo es Sí/No (ver SECCIONES_SOLO_SI_NO).
+//   - cualquier otro permiso admite Sí / Solo lectura (sl) / No.
+//   - un valor que no sea si/sl/no (ej. nominas.tipoNomina:"todo") se muestra
+//     como dato fijo, no como permiso editable.
+//
+// Agregar un módulo nuevo es pegar exactamente este mismo JSON (el real, tal
+// cual vive en la base de datos) — no hace falta describir de qué tipo es
+// cada permiso, el sistema ya sabe la regla.
+// ============================================================================
+let MODEL = {
+  trabajadores: {
+    usuarios: 'no', general: 'no', direccion: 'no', fiscal: 'no', imss: 'no', asimilables: 'no', bancos: 'no', notificaciones: 'no',
+    documentos: {modulo: 'no', doctype: {ch: 'no', co: 'no', ju: 'no'}},
+    historial: 'no', efvo: 'no',
+    reportes: {modulo: 'no', reports: {fmtAlta: 'no', solTarjeta: 'no'}},
+    rep_generales: {modulo: 'no', reports: {sueldos: 'no'}}
+  },
+  empresas: {general: 'no', bancos: 'no', conceptos: 'no', constitucion: 'no', cierre: 'no', historial: 'no'},
+  socios: {general: 'no', empresas: 'no', contacto: 'no', bancos: 'no', documentos: 'no'},
+  clientes: {general: 'no', conceptos: 'no', comisiones: 'no', monederos: 'no', autoriza: 'no', historial: 'no'},
+  'sop-documental': {auto_email: 'no', format_email: 'no'},
+  operaciones: {
+    comisiones: 'no', reportes: {
+      modulo: 'no', reports: {
+        facturacion: 'no', comisiones: 'no', indicadores: 'no', general: 'no', comercial: 'no', agrupadoClientes: 'no'
+      }
+    }
+  },
+  arrendamientos: {
+    general: 'no', empresas: 'no', documentos: 'no', bancos: 'no',
+    facturas: {modulo: 'no', auth: {auto: 'no', pago: 'no', cont: 'no'}}
+  },
+  prospectos: {
+    general: 'no', agendar: 'no', historial: 'no', estrategias: 'no', documentos: 'no',
+    propuestas: 'no', comisiones: 'no', conceptos: 'no'
+  },
+  nominas: {
+    tipoNomina: 'todo', nomActiva: 'no', incidencias: 'no', importMicrosip: 'no', cierraNomina: 'no',
+    calcEfectivo: 'no', genRecibos: 'no', repNomina: 'no', consultIncid: 'no', catConceptos: 'no',
+    repNomGeneral: 'no', repNomIncidencias: 'no', catGrupos: 'no', asigGrupos: 'no', cierreIncidencias: 'no',
+    repNomMes: 'no', recResguardos: 'no', nomDashboard: 'no'
+  },
+  reportes: {repOpeVentas: 'no', repOpeSopDoc: 'no'}
+};
+
+// Liga entre el ítem del menú lateral y el módulo de permisos que habilita (no vive dentro
+// del propio JSON del módulo, porque el módulo pegado es el JSON real tal cual, sin agregados).
+const MENU_TO_SECTION = {empl:'trabajadores', empr:'empresas', soci:'socios', clie:'clientes',
+  arre:'arrendamientos', sopdoc:'sop-documental', oper:'operaciones', prosp:'prospectos', rh:'nominas', reps:'reportes'};
+const SECTION_TO_MENU = Object.keys(MENU_TO_SECTION).reduce((acc,mk)=>{acc[MENU_TO_SECTION[mk]]=mk; return acc;}, {});
+
+// Excepción confirmada (no es el sistema "adivinando"): en nóminas TODOS sus permisos son
+// Sí/No, sin "sl" — así ya lo trata rh.page.ts en el frontend real (sl se leería como No).
+const SECCIONES_SOLO_SI_NO = ['nominas'];
+
+// Ítems de "menu" que hoy no tienen bloque propio de permisos (Contratos, Sindicatos, Reportes IA).
+const MENU_SIN_MODULO = {cont:'Contratos', sind:'Sindicatos', airep:'Reportes IA'};
+const MENU_LABELS = {empl:'Empleados', empr:'Empresas', soci:'Socios', clie:'Clientes', cont:'Contratos', arre:'Arrendamientos',
+  sind:'Sindicatos', sopdoc:'Soporte Documental', oper:'Operaciones', prosp:'Comercial', rh:'Capital Humano', airep:'Reportes IA', reps:'Reportes'};
+
+// ---- datos de demostración: usuarios activos y sus permisos guardados ----
+let siguienteIdUsuario = 16;
+const USUARIOS_DEMO = [
+  {id_usuario:7, nombre_completo:'Sonia Paola Alvarado Treviño', email:'salvarado@gi-consultores.com', username:'salvarado'},
+  {id_usuario:9, nombre_completo:'Erick Eduardo Mendoza Muñoz', email:'emendoza@gi-consultores.com', username:'emendoza'},
+  {id_usuario:12, nombre_completo:'Luis González', email:'lgonzalez@gi-consultores.com', username:'lgonzalez'},
+  {id_usuario:15, nombre_completo:'Ana Karen Ruiz Solís', email:'aruiz@gi-consultores.com', username:'aruiz'}
+];
+
+// Simula lo que hoy ya existe en usuarios_permisos: JSON plano, sin _tipo. Ojo: no todos
+// traen "usuarios" ni el resto de las llaves — así llegan hoy los reales, y por eso el
+// merge con el modelo (ver mergeWithModel) rellena lo que falte con "no".
+const PERMISOS_STORE = {
+  7: { menu:{empl:'si',empr:'no',soci:'sl',sopdoc:'si',oper:'si'},
+       trabajadores:{usuarios:'no', general:'si', direccion:'sl', documentos:{modulo:'si', doctype:{ch:'si', co:'sl', ju:'no'}}},
+       nominas:{tipoNomina:'quincenal', nomActiva:'si'} },
+  9: { menu:{empl:'si',empr:'si',soci:'si',clie:'si',arre:'si',sopdoc:'si',oper:'si',prosp:'si',rh:'si',reps:'si'},
+       trabajadores:{usuarios:'si', general:'si', direccion:'si', fiscal:'si', imss:'si', asimilables:'si', bancos:'si', notificaciones:'si',
+         documentos:{modulo:'si', doctype:{ch:'si', co:'si', ju:'si'}}, historial:'si', efvo:'si',
+         reportes:{modulo:'si', reports:{fmtAlta:'si', solTarjeta:'si'}}, rep_generales:{modulo:'si', reports:{sueldos:'si'}}},
+       nominas:{tipoNomina:'todo', nomActiva:'si', incidencias:'si', repNomina:'si'} },
+  12: { menu:{empl:'si',empr:'si',soci:'si',clie:'si',cont:'si',arre:'si',sind:'si',sopdoc:'si',oper:'si',prosp:'si',rh:'si',airep:'si',reps:'si'},
+        trabajadores:{usuarios:'si', general:'si'} },
+  15: { menu:{empl:'no'}, trabajadores:{usuarios:'no', general:'si', direccion:'si', bancos:'si'} }
+};
+
+// ============================================================================
+// Motor de permisos: aplana el modelo + lo guardado en filas para pintarlas,
+// aplica visibilidad (menu / modulo) y la limpieza al guardar.
+// ============================================================================
+function isLeaf(v){ return typeof v !== 'object' || v === null; }
+
+function getVal(values, path){
+  const parts = path.split('.'); let n = values;
+  for (const p of parts){ if (n == null) return undefined; n = n[p]; }
+  return n;
+}
+function setVal(values, path, val){
+  const parts = path.split('.'); let n = values;
+  for (let i=0;i<parts.length-1;i++){ if (n[parts[i]] === undefined) n[parts[i]] = {}; n = n[parts[i]]; }
+  n[parts[parts.length-1]] = val;
+}
+
+// Combina el modelo con lo ya guardado: todo lo que el usuario no tenga, nace con el valor
+// por default del modelo (típicamente "no"; "todo" para el caso fijo de tipoNomina). Es lo
+// que permite agregar un módulo nuevo sin tener que tocar a los usuarios existentes uno a uno.
+function mergeWithModel(node, stored){
+  if (isLeaf(node)){
+    return typeof stored === 'string' ? stored : node;
+  }
+  const out = {};
+  Object.keys(node).forEach(k => {
+    out[k] = mergeWithModel(node[k], stored && typeof stored === 'object' ? stored[k] : undefined);
+  });
+  return out;
+}
+function mergeAll(stored){
+  const values = {};
+  Object.keys(MODEL).forEach(k => values[k] = mergeWithModel(MODEL[k], stored ? stored[k] : undefined));
+  values.menu = {};
+  Object.keys(MENU_LABELS).forEach(mk => values.menu[mk] = (stored && stored.menu && stored.menu[mk]) ?? 'no');
+  return values;
+}
+
+function prettyLabel(key){
+  return key.replace(/[_-]/g,' ').replace(/([a-z0-9])([A-Z])/g,'$1 $2').replace(/\b\w/g, c=>c.toUpperCase());
+}
+
+function countLeaves(node){
+  if (isLeaf(node)) return 1;
+  return Object.keys(node).reduce((s,k)=>s+countLeaves(node[k]),0);
+}
+
+// Construye un editor completo (lista de módulos + detalle) dentro del contenedor dado.
+function buildPermEditor(container, values){
+
+  const moduleKeys = Object.keys(MODEL);
+  const listHtml = moduleKeys.map((k,i)=>
+    `<button type="button" class="perm-list-item${i===0?' is-active':''}" data-module="${k}">${prettyLabel(k)}</button>`
+  ).join('') +
+  `<button type="button" class="perm-list-item" data-module="__menu">Menú (acceso general)</button>`;
+
+  container.innerHTML =
+    `<div class="perm-shell">
+       <div class="perm-list">${listHtml}</div>
+       <div class="perm-detail" data-perm-detail></div>
+     </div>`;
+
+  const listEl = container.querySelector('.perm-list');
+  const detailEl = container.querySelector('[data-perm-detail]');
+
+  let seq = 0;
+
+  function isModuleVisible(moduleKey){
+    const menuKey = SECTION_TO_MENU[moduleKey];
+    // Regla acordada: SOLO "menu.X" oculta el módulo completo de esta lista. "general" ya
+    // NO cascada ni oculta nada — es un permiso normal más, independiente de los demás.
+    if (!menuKey) return true;
+    return getVal(values, 'menu.'+menuKey) === 'si';
+  }
+
+  // "modulo" y "general" son candados de todo-o-nada (Sí/No); dentro de "menu" o de una
+  // sección de SECCIONES_SOLO_SI_NO, TODO va en Sí/No sin importar el nombre de la llave;
+  // cualquier otro permiso admite además "Solo lectura" (sl). Regla por nombre, no por
+  // declaración aparte — así se puede pegar el JSON real tal cual.
+  function renderLeaf(key, value, path, opts){
+    opts = opts || {};
+    const label = prettyLabel(key);
+    if (value !== 'si' && value !== 'sl' && value !== 'no'){
+      // valor fijo/informativo (ej. tipoNomina:"todo"): no es un permiso editable con este motor.
+      return `<div class="select-row perm-row"><span class="t-label" style="font-weight:600">${label}</span><span class="acc-badge">${value}</span></div>`;
+    }
+    const isTwoWay = opts.forceTwoWay || key === 'general' || key === 'modulo';
+    const valores = isTwoWay ? ['si','no'] : ['si','sl','no'];
+    const current = valores.includes(value) ? value : 'no';
+    const btns = valores.map(v => {
+      const lbl = v==='si'?'Sí':(v==='sl'?'sl':'No');
+      return `<button type="button" class="acc-opt${v===current?' is-active':''}" data-value="${v}">${lbl}</button>`;
+    }).join('');
+    const gateAttr = opts.gateId ? ` data-gate="${opts.gateId}"` : '';
+    return `<div class="perm-row${opts.main?' perm-row-main':''}"><span class="t-label">${label}</span>
+      <div class="acc-control" data-perm="${path}" data-value="${current}"${gateAttr}>${btns}</div></div>`;
+  }
+
+  function renderLevel(node, path, forceTwoWay){
+    const keys = Object.keys(node);
+    const hasModulo = keys.includes('modulo');
+    const gateId = hasModulo ? 'g'+(++seq) : null;
+    let html = '';
+    if (hasModulo) html += renderLeaf('modulo', node.modulo, path+'.modulo', {main:true, gateId, forceTwoWay});
+
+    const rest = [];
+    keys.forEach(k => {
+      if (hasModulo && k === 'modulo') return;
+      if (isLeaf(node[k])) rest.push(renderLeaf(k, node[k], path+'.'+k, {forceTwoWay}));
+    });
+    keys.forEach(k => {
+      if (!isLeaf(node[k])) {
+        rest.push(`<div class="sub-label">${prettyLabel(k).toUpperCase()}</div><div class="sub-list">${renderLevel(node[k], path+'.'+k, forceTwoWay)}</div>`);
+      }
+    });
+
+    if (hasModulo){
+      html += `<div class="sub-list-wrap" data-gated="${gateId}">${rest.join('')}</div>`;
+      html += `<div class="sub-empty-hint">Sin sub-permisos: el módulo está en "No".</div>`;
+    } else {
+      html += rest.join('');
+    }
+    return html;
+  }
+
+  function applyGate(gateId, on){
+    const zone = detailEl.querySelector(`[data-gated="${gateId}"]`);
+    if (zone) zone.classList.toggle('is-hidden', !on);
+  }
+  function initGates(){
+    detailEl.querySelectorAll('.acc-control[data-gate]').forEach(ctrl => applyGate(ctrl.dataset.gate, ctrl.dataset.value === 'si'));
+  }
+
+  function renderMenuSection(){
+    const menuKeys = Object.keys(MENU_LABELS);
+    const rows = menuKeys.map(mk => {
+      const current = getVal(values, 'menu.'+mk) ?? 'no';
+      const btns = ['si','no'].map(v => `<button type="button" class="acc-opt${v===current?' is-active':''}" data-value="${v}">${v==='si'?'Sí':'No'}</button>`).join('');
+      const sinModulo = MENU_SIN_MODULO[mk] ? ' <span class="new-node-tag">sin permisos propios</span>' : '';
+      return `<div class="perm-row"><span class="t-label">${MENU_LABELS[mk]}${sinModulo}</span><div class="acc-control" data-perm="menu.${mk}" data-value="${current}">${btns}</div></div>`;
+    }).join('');
+    detailEl.innerHTML = `<div class="perm-detail-head"><span class="perm-detail-title">Menú (acceso general)</span><span class="acc-badge">${menuKeys.length} interruptores</span></div><div>${rows}</div>`;
+  }
+
+  function renderModuleSection(moduleKey){
+    const node = MODEL[moduleKey];
+    const forceTwoWay = SECCIONES_SOLO_SI_NO.includes(moduleKey);
+    detailEl.innerHTML =
+      `<div class="perm-detail-head"><span class="perm-detail-title">${prettyLabel(moduleKey)}</span><span class="acc-badge">${countLeaves(node)} permisos</span></div>
+       <div class="perm-rows">${renderLevel(node, moduleKey, forceTwoWay)}</div>`;
+    initGates();
+  }
+
+  function selectModule(moduleKey){
+    listEl.querySelectorAll('.perm-list-item').forEach(b => b.classList.toggle('is-active', b.dataset.module === moduleKey));
+    if (moduleKey === '__menu') renderMenuSection(); else renderModuleSection(moduleKey);
+  }
+
+  function syncVisibility(){
+    moduleKeys.forEach(k => {
+      const item = listEl.querySelector(`.perm-list-item[data-module="${k}"]`);
+      if (item) item.classList.toggle('is-hidden', !isModuleVisible(k));
+    });
+    const activeBtn = listEl.querySelector('.perm-list-item.is-active');
+    if (activeBtn && activeBtn.classList.contains('is-hidden')) selectModule('__menu');
+  }
+
+  detailEl.addEventListener('click', e => {
+    const btn = e.target.closest('.acc-opt');
+    if (!btn) return;
+    const ctrl = btn.closest('.acc-control');
+    ctrl.querySelectorAll('.acc-opt').forEach(b => b.classList.toggle('is-active', b === btn));
+    ctrl.dataset.value = btn.dataset.value;
+    setVal(values, ctrl.dataset.perm, btn.dataset.value);
+    if (ctrl.dataset.gate) applyGate(ctrl.dataset.gate, btn.dataset.value === 'si');
+    syncVisibility();
+  });
+  detailEl.addEventListener('change', e => {
+    const sel = e.target.closest('.sel-eleccion');
+    if (!sel) return;
+    setVal(values, sel.dataset.perm, sel.value);
+  });
+  listEl.addEventListener('click', e => {
+    const btn = e.target.closest('.perm-list-item');
+    if (!btn) return;
+    selectModule(btn.dataset.module);
+  });
+
+  selectModule(moduleKeys[0]);
+  syncVisibility();
+}
+
+// ============================================================================
+// Limpieza al guardar: acuerdo de la junta — "si aquí no tiene acceso, bórrale".
+// Se aplica SOLO en dos casos:
+//   - menu.X = no  -> todo lo que cuelgue de ese módulo se pone en "no".
+//   - modulo = no (dentro de un grupo) -> se limpian sus hijos.
+// "general" es una opción normal: NO limpia nada más, solo se guarda su propio valor.
+// ============================================================================
+// Cuenta como "permiso real" cualquier hoja con valor si/sl/no; un valor fijo como
+// tipoNomina:"todo" no se toca (no es un candado ni algo que este motor pueda limpiar).
+function isRealPermValue(v){ return v === 'si' || v === 'sl' || v === 'no'; }
+
+function collectCleanup(node, values, path, out){
+  Object.keys(node).forEach(k => {
+    const childPath = path ? path+'.'+k : k;
+    const child = node[k];
+    if (isLeaf(child)){
+      if (isRealPermValue(child) && getVal(values, childPath) !== 'no') out.push(childPath);
+    } else {
+      collectCleanup(child, values, childPath, out);
+    }
+  });
+}
+function cleanupPermTree(values){
+  const cleaned = [];
+  Object.keys(MODEL).forEach(moduleKey => {
+    const node = MODEL[moduleKey];
+    const menuKey = SECTION_TO_MENU[moduleKey];
+    const menuOk = !menuKey || getVal(values, 'menu.'+menuKey) === 'si';
+    if (!menuOk){
+      collectCleanup(node, values, moduleKey, cleaned);
+      zeroSubtree(node, values, moduleKey);
+      return;
+    }
+    zeroGruposApagados(node, values, moduleKey, cleaned);
+  });
+  return cleaned;
+}
+function zeroSubtree(node, values, path){
+  Object.keys(node).forEach(k => {
+    const childPath = path+'.'+k, child = node[k];
+    if (isLeaf(child)){ if (isRealPermValue(child)) setVal(values, childPath, 'no'); }
+    else zeroSubtree(child, values, childPath);
+  });
+}
+function zeroGruposApagados(node, values, path, cleaned){
+  Object.keys(node).forEach(k => {
+    const childPath = path+'.'+k, child = node[k];
+    if (isLeaf(child)) return;
+    if (Object.keys(child).includes('modulo')){
+      const moduloOk = getVal(values, childPath+'.modulo') === 'si';
+      if (!moduloOk){
+        collectCleanup(child, values, childPath, cleaned);
+        zeroSubtree(child, values, childPath);
+      } else {
+        zeroGruposApagados(child, values, childPath, cleaned);
+      }
+    } else {
+      zeroGruposApagados(child, values, childPath, cleaned);
+    }
+  });
+}
+
+// ---- helpers de UI: toast y confirmación con resumen antes de guardar ----
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('is-shown');
+  clearTimeout(t._tm); t._tm = setTimeout(()=>t.classList.remove('is-shown'), 2800);
+}
+function confirmSaveWithCleanup(values, onConfirm){
+  const before = JSON.parse(JSON.stringify(values));
+  const cleaned = cleanupPermTree(values);
+  if (cleaned.length === 0){ onConfirm(); return; }
+  if (confirm('Se limpiarán '+cleaned.length+' permiso(s) huérfanos antes de guardar (ver detalle en consola). ¿Continuar?')) {
+    console.log('Permisos limpiados automáticamente:', cleaned);
+    onConfirm();
+  } else {
+    Object.assign(values, before);
+  }
+}
+
+// ============================================================================
+// Pestaña Usuarios: listado, alta (por correo) y baja
+// ============================================================================
+function renderUsuariosTable(filtro){
+  const tbody = document.getElementById('usuariosTbody');
+  const f = (filtro||'').toLowerCase().trim();
+  const rows = USUARIOS_DEMO.filter(u => !f || u.nombre_completo.toLowerCase().includes(f) || u.username.toLowerCase().includes(f) || u.email.toLowerCase().includes(f));
+  tbody.innerHTML = rows.map(u => {
+    const sinPermisos = !PERMISOS_STORE[u.id_usuario] || Object.keys(PERMISOS_STORE[u.id_usuario]).length === 0;
+    return `
+    <tr data-id="${u.id_usuario}">
+      <td class="cell-id">${u.id_usuario}</td>
+      <td>${u.nombre_completo}${sinPermisos ? '<span class="sin-permisos-tag">sin permisos</span>' : ''}</td>
+      <td>${u.email}</td>
+      <td>${u.username}</td>
+      <td class="cell-actions"><span class="row-actions">
+        <button class="btn-icon-sq btn-perm" data-open="${u.id_usuario}" title="Permisos">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        </button>
+        <button class="btn-icon-sq btn-baja" data-baja="${u.id_usuario}" title="Dar de baja">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>
+        </button>
+      </span></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('usuariosFootNote').textContent = rows.length + ' usuario(s)';
+}
+renderUsuariosTable('');
+document.getElementById('filtroUsuarios').addEventListener('input', e => renderUsuariosTable(e.target.value));
+
+document.getElementById('usuariosTbody').addEventListener('click', e => {
+  const bajaBtn = e.target.closest('[data-baja]');
+  if (bajaBtn){
+    const idUsuario = Number(bajaBtn.dataset.baja);
+    const u = USUARIOS_DEMO.find(x => x.id_usuario === idUsuario);
+    if (confirm('¿Dar de baja a "'+u.nombre_completo+'"? En el sistema real esto es baja lógica (estatus=borrado), no se elimina el registro.')){
+      USUARIOS_DEMO.splice(USUARIOS_DEMO.indexOf(u), 1);
+      renderUsuariosTable(document.getElementById('filtroUsuarios').value);
+      showToast('Usuario "'+u.nombre_completo+'" dado de baja (demo).');
+    }
+    return;
+  }
+  const openBtn = e.target.closest('[data-open]');
+  if (openBtn) abrirDrawerPermisos(Number(openBtn.dataset.open));
+});
+
+// ---- Alta de usuario ----
+const altaOverlay = document.getElementById('altaOverlay');
+document.getElementById('btnAltaUsuario').addEventListener('click', () => {
+  ['auNombre','auPaterno','auMaterno','auCorreo','auUsername','auPassword'].forEach(id => document.getElementById(id).value = '');
+  altaOverlay.classList.add('is-open');
+});
+document.getElementById('altaClose').addEventListener('click', () => altaOverlay.classList.remove('is-open'));
+document.getElementById('altaCancel').addEventListener('click', () => altaOverlay.classList.remove('is-open'));
+altaOverlay.addEventListener('click', e => { if (e.target === altaOverlay) altaOverlay.classList.remove('is-open'); });
+
+document.getElementById('altaGuardar').addEventListener('click', () => {
+  const nombre = document.getElementById('auNombre').value.trim();
+  const paterno = document.getElementById('auPaterno').value.trim();
+  const materno = document.getElementById('auMaterno').value.trim();
+  const correo = document.getElementById('auCorreo').value.trim();
+  const username = document.getElementById('auUsername').value.trim();
+  const password = document.getElementById('auPassword').value;
+
+  if (!nombre || !correo || !username || !password){ alert('Nombre, correo, usuario y contraseña son obligatorios.'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)){ alert('El correo no parece válido.'); return; }
+  if (USUARIOS_DEMO.some(u => u.username === username)){ alert('Ese nombre de usuario ya existe.'); return; }
+  if (USUARIOS_DEMO.some(u => u.email.toLowerCase() === correo.toLowerCase())){ alert('Ese correo ya está registrado.'); return; }
+
+  const idUsuario = siguienteIdUsuario++;
+  const nombre_completo = [nombre, paterno, materno].filter(Boolean).join(' ');
+  USUARIOS_DEMO.push({id_usuario:idUsuario, nombre_completo, email:correo, username});
+  PERMISOS_STORE[idUsuario] = {}; // nace sin ningún permiso, todo en "no" al fusionarse con el modelo
+
+  altaOverlay.classList.remove('is-open');
+  renderUsuariosTable(document.getElementById('filtroUsuarios').value);
+  showToast('Usuario "'+nombre_completo+'" creado (demo), sin permisos asignados.');
+
+  if (confirm('Usuario creado. ¿Deseas asignarle permisos ahora?\n\n(Si eliges "Cancelar", queda sin permisos y puedes asignarlos después con el candado de su fila.)')){
+    abrirDrawerPermisos(idUsuario);
+  }
+});
+
+// ============================================================================
+// Drawer: editor de permisos de un usuario (se usa desde el candado y desde el alta)
+// ============================================================================
+const drawerOverlay = document.getElementById('drawerOverlay');
+let currentDrawerValues = null, currentDrawerUser = null;
+function abrirDrawerPermisos(idUsuario){
+  currentDrawerUser = USUARIOS_DEMO.find(u => u.id_usuario === idUsuario);
+  currentDrawerValues = mergeAll(PERMISOS_STORE[idUsuario]);
+  document.getElementById('drawerTitle').textContent = 'Permisos — ' + currentDrawerUser.nombre_completo;
+  document.getElementById('drawerSub').textContent = 'Usuario: ' + currentDrawerUser.username + ' (id ' + idUsuario + ')';
+  buildPermEditor(document.getElementById('editorPermisos'), currentDrawerValues);
+  drawerOverlay.classList.add('is-open');
+}
+function closeDrawer(){ drawerOverlay.classList.remove('is-open'); }
+document.getElementById('drawerClose').addEventListener('click', closeDrawer);
+document.getElementById('drawerCancel').addEventListener('click', closeDrawer);
+drawerOverlay.addEventListener('click', e => { if (e.target === drawerOverlay) closeDrawer(); });
+document.getElementById('drawerSave').addEventListener('click', () => {
+  confirmSaveWithCleanup(currentDrawerValues, () => {
+    PERMISOS_STORE[currentDrawerUser.id_usuario] = currentDrawerValues;
+    showToast('Permisos actualizados (demo) para ' + currentDrawerUser.username + '.');
+    renderUsuariosTable(document.getElementById('filtroUsuarios').value);
+    closeDrawer();
+  });
+});
+
+// ============================================================================
+// Pestaña Catálogo de módulos (antes era un modal aparte, ahora vive en la vista)
+// ============================================================================
+const nfPadre = document.getElementById('nfPadre');
+const nfNombre = document.getElementById('nfNombre');
+const nfClave = document.getElementById('nfClave');
+const nfMenuClave = document.getElementById('nfMenuClave');
+const nfNuevoWrap = document.getElementById('nfNuevoWrap');
+const nfJson = document.getElementById('nfJson');
+
+// Valores que puede traer una hoja del módulo — los mismos 4 que ya valida el backend
+// (giTrabajadores.php: PERM_VALUES). No hace falta declarar aparte cuál es "sl": el
+// renderizador ya sabe la regla por el nombre de la llave (ver renderLeaf).
+const VALORES_PERMITIDOS = ['si','sl','no','todo'];
+
+// Valida el módulo completo pegado en crudo: mismas reglas que debería aplicar el backend
+// al recibir un POST /permisos/modelo. Solo revisa que la FORMA sea correcta (objeto,
+// profundidad, nombres de llave, valores conocidos) — no necesita que nadie describa de
+// qué tipo es cada permiso, porque esa parte ya no se adivina ni se declara: es fija.
+function validateModuleJson(node, depth){
+  depth = depth || 0;
+  if (depth > 6) return {ok:false, error:'Más de 6 niveles de profundidad.'};
+  if (typeof node !== 'object' || node === null || Array.isArray(node)) return {ok:false, error:'Debe ser un objeto JSON.'};
+  const keys = Object.keys(node);
+  if (keys.length === 0) return {ok:false, error:'El módulo no tiene ningún permiso dentro.'};
+  for (const k of keys){
+    if (!/^[A-Za-z0-9_]{1,40}$/.test(k)) return {ok:false, error:'La llave "'+k+'" tiene caracteres no válidos (solo letras, números y guion bajo).'};
+    const v = node[k];
+    if (isLeaf(v)){
+      if (typeof v !== 'string' || !VALORES_PERMITIDOS.includes(v)) return {ok:false, error:'"'+k+'" vale "'+v+'"; solo se aceptan: ' + VALORES_PERMITIDOS.join(', ') + '.'};
+    } else {
+      const r = validateModuleJson(v, depth+1);
+      if (!r.ok) return {ok:false, error:'En "'+k+'": '+r.error};
+    }
+  }
+  return {ok:true};
+}
+
+function slugify(str){
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+(.)/g, (m,c)=>c.toUpperCase()).replace(/[^a-zA-Z0-9]/g,'').replace(/^[A-Z]/, c=>c.toLowerCase());
+}
+function fillPadreOptions(){
+  const opciones = [{value:'', label:'— Nuevo módulo —'}]
+    .concat(Object.keys(MODEL).map(mk => ({value:mk, label:'Actualizar: '+prettyLabel(mk)})));
+  const valorPrevio = nfPadre.value;
+  nfPadre.innerHTML = opciones.map(o => `<option value="${o.value}">${o.label}</option>`).join('');
+  if (opciones.some(o => o.value === valorPrevio)) nfPadre.value = valorPrevio;
+  syncCatalogoFields();
+}
+function syncCatalogoFields(){
+  const esNuevo = nfPadre.value === '';
+  nfNuevoWrap.style.display = esNuevo ? '' : 'none';
+}
+nfPadre.addEventListener('change', syncCatalogoFields);
+nfNombre.addEventListener('input', () => nfClave.value = slugify(nfNombre.value));
+document.getElementById('nfJsonEjemplo').addEventListener('click', () => {
+  nfJson.value = JSON.stringify({modulo:'si', tipos:{nacional:'si', importacion:'sl'}}, null, 2);
+});
+
+function resetCatalogoForm(){
+  fillPadreOptions();
+  nfNombre.value=''; nfClave.value=''; nfMenuClave.value=''; nfJson.value='';
+}
+
+// Vista de solo lectura del catálogo, para ubicarse antes de agregar algo nuevo. Cada hoja
+// muestra su valor de plantilla (default), y "modulo"/"general" se marcan como candado.
+function renderCatalogTree(){
+  function renderNode(node){
+    return Object.keys(node).map(k => {
+      const child = node[k];
+      if (isLeaf(child)){
+        const tag = (k==='general'||k==='modulo') ? 'candado si/no' : (child==='si'||child==='sl'||child==='no' ? 'si/sl/no' : 'dato fijo: '+child);
+        return `<li>${prettyLabel(k)}<span class="node-tipo">${tag}</span></li>`;
+      }
+      return `<li>${prettyLabel(k)}<ul>${renderNode(child)}</ul></li>`;
+    }).join('');
+  }
+  const html = Object.keys(MODEL).map(mk => {
+    const menuKey = SECTION_TO_MENU[mk];
+    const menuTag = menuKey ? `<span class="node-tipo">menu.${menuKey}</span>` : '';
+    return `<li class="node-modulo">${prettyLabel(mk)}${menuTag}<ul>${renderNode(MODEL[mk])}</ul></li>`;
+  }).join('');
+  document.getElementById('catTree').innerHTML = `<ul>${html}</ul>`;
+}
+
+document.getElementById('catGuardarBtn').addEventListener('click', () => {
+  const padrePath = nfPadre.value;
+  const esNuevo = padrePath === '';
+
+  let parsed;
+  try { parsed = JSON.parse(nfJson.value); }
+  catch(e) { alert('El JSON no es válido: ' + e.message); return; }
+  const check = validateModuleJson(parsed);
+  if (!check.ok){ alert('El módulo no pasó la validación:\n' + check.error); return; }
+
+  if (esNuevo){
+    const nombre = nfNombre.value.trim();
+    const clave = nfClave.value.trim();
+    const menuClave = nfMenuClave.value.trim();
+    if (!nombre || !clave){ alert('Escribe el nombre visible del módulo nuevo.'); return; }
+    if (!/^[a-z]{2,8}$/.test(menuClave)){ alert('La clave de menú debe ser de 2 a 8 letras minúsculas.'); return; }
+    if (MODEL[clave]) { alert('Ya existe un módulo con esa clave.'); return; }
+    if (MENU_LABELS[menuClave]) { alert('Esa clave de menú ya existe.'); return; }
+
+    MODEL[clave] = parsed;
+    MENU_TO_SECTION[menuClave] = clave;
+    SECTION_TO_MENU[clave] = menuClave;
+    MENU_LABELS[menuClave] = nombre;
+    showToast('Módulo "'+nombre+'" agregado al catálogo (solo en memoria, demo).');
+  } else {
+    MODEL[padrePath] = parsed;
+    showToast('Módulo "'+prettyLabel(padrePath)+'" actualizado en el catálogo (solo en memoria, demo).');
+  }
+
+  resetCatalogoForm();
+  renderCatalogTree();
+});
+
+// ============================================================================
+// Navegación entre páginas y pestañas de Configuración
+// ============================================================================
+function goToPage(pageName){
+  document.querySelectorAll('.navitem[data-page]').forEach(b => b.classList.toggle('is-active', b.dataset.page === pageName));
+  document.querySelectorAll('.page').forEach(p => p.classList.toggle('is-active', p.id === 'page-'+pageName));
+}
+document.querySelectorAll('.navitem[data-page]').forEach(btn => btn.addEventListener('click', () => goToPage(btn.dataset.page)));
+
+document.querySelectorAll('[data-ctab]').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('[data-ctab]').forEach(b => b.classList.toggle('is-active', b === btn));
+  document.querySelectorAll('[data-ctab-panel]').forEach(p => p.classList.toggle('is-active', p.dataset.ctabPanel === btn.dataset.ctab));
+  if (btn.dataset.ctab === 'catalogo'){ fillPadreOptions(); renderCatalogTree(); }
+}));
+
+resetCatalogoForm();
+renderCatalogTree();
+goToPage('empleados');
+
+})();
+</script>
+</body>
+</html>
