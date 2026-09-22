@@ -241,7 +241,6 @@ tbody tr:hover{background:var(--bg-hover);}
                     <span class="field-label">Cómo capturarlo</span>
                     <div class="mode-switch" id="catOpcionSwitch">
                       <button type="button" class="mode-btn" data-opcion="A">A · Solo formulario</button>
-                      <button type="button" class="mode-btn" data-opcion="B">B · Formulario + JSON</button>
                       <button type="button" class="mode-btn is-active" data-opcion="C">C · Solo JSON</button>
                     </div>
                   </div>
@@ -271,8 +270,8 @@ tbody tr:hover{background:var(--bg-hover);}
                     <div class="field-group">
                       <span class="field-label">Estructura</span>
                       <div class="builder-toolbar">
-                        <button type="button" class="btn-ghost" id="catBuilderAddLeafRoot">+ Permiso</button>
-                        <button type="button" class="btn-ghost" id="catBuilderAddGroupRoot">+ Grupo con candado</button>
+                        <button type="button" class="btn-ghost" id="catBuilderAddLeafRoot">+ Submódulos</button>
+                        <button type="button" class="btn-ghost" id="catBuilderAddGroupRoot">+ Grupo</button>
                       </div>
                       <div id="catBuilderTree" class="builder-tree"></div>
                     </div>
@@ -350,7 +349,10 @@ tbody tr:hover{background:var(--bg-hover);}
           <span class="field-label">Materno</span>
           <input type="text" id="auMaterno" placeholder="Apellido materno">
         </div>
-        <div class="field-group"></div>
+        <div class="field-group">
+          <span class="field-label">Área</span>
+          <input type="text" id="auArea" placeholder="Se llena sola al encontrar el trabajador" disabled>
+        </div>
       </div>
       <div class="field-row2">
         <div class="field-group">
@@ -462,15 +464,27 @@ const USUARIOS_DEMO = [
 // solo valida RFC/CURP) — por eso "Karla Jiménez" se repite dos veces aquí a propósito, para
 // probar el aviso de "más de un match" cuando se busca por correo en el alta de usuario.
 const TRABAJADORES_DEMO = [
-  {id_trabajador:101, nombre:'Ana Karen', paterno:'Ruiz', materno:'Solís', email_empresa:'aruiz@gi-consultores.com'},
-  {id_trabajador:102, nombre:'Mario', paterno:'Contreras', materno:'León', email_empresa:'mcontreras@gi-consultores.com'},
-  {id_trabajador:103, nombre:'Karla', paterno:'Jiménez', materno:'Paz', email_empresa:'kjimenez@gi-consultores.com'},
-  {id_trabajador:104, nombre:'Karla', paterno:'Jiménez', materno:'Osorio', email_empresa:'kjimenez@gi-consultores.com'}
+  {id_trabajador:101, nombre:'Ana Karen', paterno:'Ruiz', materno:'Solís', email_empresa:'aruiz@gi-consultores.com', id_departamento:1},
+  {id_trabajador:102, nombre:'Mario', paterno:'Contreras', materno:'León', email_empresa:'mcontreras@gi-consultores.com', id_departamento:3},
+  {id_trabajador:103, nombre:'Karla', paterno:'Jiménez', materno:'Paz', email_empresa:'kjimenez@gi-consultores.com', id_departamento:2},
+  {id_trabajador:104, nombre:'Karla', paterno:'Jiménez', materno:'Osorio', email_empresa:'kjimenez@gi-consultores.com', id_departamento:4}
 ];
 function buscarTrabajadoresPorCorreo(correo){
   const c = correo.trim().toLowerCase();
   if (!c) return [];
   return TRABAJADORES_DEMO.filter(t => t.email_empresa.toLowerCase() === c);
+}
+
+// ---- datos de demostración: tabla "departamentos" — trabajadores.id_departamento apunta aquí ----
+const DEPARTAMENTOS_DEMO = [
+  {id_departamento:1, nombre:'Recursos Humanos'},
+  {id_departamento:2, nombre:'Contabilidad'},
+  {id_departamento:3, nombre:'Sistemas'},
+  {id_departamento:4, nombre:'Comercial'}
+];
+function buscarNombreDepartamento(idDepartamento){
+  const d = DEPARTAMENTOS_DEMO.find(x => x.id_departamento === idDepartamento);
+  return d ? d.nombre : '';
 }
 
 // Simula lo que hoy ya existe en usuarios_permisos: JSON plano, sin _tipo. Ojo: no todos
@@ -812,7 +826,7 @@ document.getElementById('usuariosTbody').addEventListener('click', e => {
 const altaOverlay = document.getElementById('altaOverlay');
 const auCorreoEstado = document.getElementById('auCorreoEstado');
 document.getElementById('btnAltaUsuario').addEventListener('click', () => {
-  ['auNombre','auPaterno','auMaterno','auCorreo','auUsername','auPassword'].forEach(id => document.getElementById(id).value = '');
+  ['auNombre','auPaterno','auMaterno','auArea','auCorreo','auUsername','auPassword'].forEach(id => document.getElementById(id).value = '');
   auCorreoEstado.textContent = '';
   auCorreoEstado.className = 'field-hint';
   altaOverlay.classList.add('is-open');
@@ -837,12 +851,17 @@ document.getElementById('auCorreo').addEventListener('blur', () => {
     document.getElementById('auNombre').value = t.nombre;
     document.getElementById('auPaterno').value = t.paterno;
     document.getElementById('auMaterno').value = t.materno;
+    // El área no se captura a mano: trabajadores solo guarda el id_departamento, así que
+    // aquí se resuelve con una consulta a "departamentos" (en el sistema real sería un JOIN).
+    document.getElementById('auArea').value = buscarNombreDepartamento(t.id_departamento);
     auCorreoEstado.textContent = 'Coincide con un trabajador — datos rellenados, puedes ajustarlos si hace falta.';
     auCorreoEstado.className = 'field-hint hint-ok';
   } else if (matches.length > 1){
+    document.getElementById('auArea').value = '';
     auCorreoEstado.textContent = 'Hay ' + matches.length + ' trabajadores con este correo. No se rellenó nada automático — verifica y captura los datos a mano.';
     auCorreoEstado.className = 'field-hint hint-warn';
   } else {
+    document.getElementById('auArea').value = '';
     auCorreoEstado.textContent = 'Sin coincidencia en trabajadores — puedes llenar los datos manualmente (ej. un tercero externo).';
     auCorreoEstado.className = 'field-hint';
   }
@@ -956,19 +975,18 @@ function slugify(str){
 const OPCION_CATALOGO_COMPLETO = '__full__';
 
 // ============================================================================
-// Las 3 opciones de captura, para comparar (todas guardan en el mismo MODEL):
-//   A) Solo formulario   — constructor a puros clics, sin escribir JSON. Sin
-//                          "Catálogo completo" (eso es puro pegado de texto).
-//   B) Formulario + JSON — campos de nombre/clave/menú para el módulo nuevo
-//                          (igual que A), pero la estructura se pega en JSON
-//                          en vez de armarse a clics.
-//   C) Solo JSON         — un recuadro liso para pegar el módulo. Sin campos
-//                          de "módulo nuevo": aquí solo se actualiza algo que
-//                          ya existe, o se reemplaza el catálogo completo.
+// Las 2 opciones de captura, para comparar (ambas guardan en el mismo MODEL).
+// Hubo una tercera opción (formulario + JSON) que se descartó en junta del
+// 2026-09-22 para no duplicar trabajo entre las otras dos:
+//   A) Solo formulario — constructor a puros clics, sin escribir JSON. Sin
+//                        "Catálogo completo" (eso es puro pegado de texto).
+//   C) Solo JSON        — un recuadro liso para pegar el módulo. Sin campos
+//                        de "módulo nuevo": aquí solo se actualiza algo que
+//                        ya existe, o se reemplaza el catálogo completo.
 // ============================================================================
-let catOpcion = 'C'; // 'A' | 'B' | 'C'
+let catOpcion = 'C'; // 'A' | 'C'
 
-function jsonDisponible(){ return catOpcion === 'B' || catOpcion === 'C'; }
+function jsonDisponible(){ return catOpcion === 'C'; }
 function builderDisponible(){ return catOpcion === 'A'; }
 
 function fillPadreOptions(){
@@ -981,7 +999,7 @@ function fillPadreOptions(){
   syncCatalogoFields();
 }
 function syncCatalogoFields(){
-  const esNuevoConFormulario = nfPadre.value === '' && catOpcion !== 'C';
+  const esNuevoConFormulario = nfPadre.value === '' && catOpcion === 'A';
   nfNuevoWrap.style.display = esNuevoConFormulario ? '' : 'none';
 
   // En C, un módulo nuevo se identifica con su propia llave dentro del JSON — no hay campos
@@ -1038,7 +1056,7 @@ function renderBuilderLevel(node, path){
       <div class="builder-row">
         <span class="builder-key">${prettyLabel(k)}</span>
         <span class="node-tipo">${tag}</span>
-        ${!esHoja ? `<button type="button" class="btn-mini" data-baddleaf="${childPath.join('.')}">+ Permiso</button>
+        ${!esHoja ? `<button type="button" class="btn-mini" data-baddleaf="${childPath.join('.')}">+ Submódulos</button>
         <button type="button" class="btn-mini" data-baddgroup="${childPath.join('.')}">+ Grupo</button>` : ''}
         <button type="button" class="btn-mini btn-mini-del" data-bdel="${childPath.join('.')}">Quitar</button>
       </div>
