@@ -132,9 +132,19 @@ tbody tr:hover{background:var(--bg-hover);}
 .field-group input[type=text], .field-group input[type=email], .field-group input[type=password], .field-group select, .field-group textarea{background:var(--bg-input);border:1px solid var(--border);color:var(--text-primary);font-size:.86rem;padding:9px 10px;border-radius:4px;font-family:inherit;}
 .field-group textarea{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.8rem;resize:vertical;}
 .field-hint{font-size:.72rem;color:var(--text-muted);}
-.mode-switch{display:inline-flex;gap:4px;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;padding:3px;width:fit-content;}
-.mode-btn{background:transparent;border:none;color:var(--text-secondary);font-size:.78rem;font-weight:700;padding:6px 12px;border-radius:4px;cursor:pointer;font-family:inherit;}
+.mode-switch{display:inline-flex;flex-wrap:wrap;gap:4px;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;padding:3px;width:fit-content;}
+.mode-btn{background:transparent;border:none;color:var(--text-secondary);font-size:.78rem;font-weight:700;padding:6px 12px;border-radius:4px;cursor:pointer;font-family:inherit;white-space:nowrap;}
 .mode-btn.is-active{background:var(--accent-gold-soft);color:var(--accent-gold);}
+.builder-toolbar{display:flex;gap:8px;margin-bottom:10px;}
+.builder-tree{border:1px solid var(--border-soft);border-radius:4px;padding:10px 12px;min-height:56px;}
+.builder-row{display:flex;align-items:center;gap:8px;padding:4px 0;flex-wrap:wrap;}
+.builder-key{font-size:.85rem;font-weight:600;flex:1 1 auto;}
+.builder-children{padding-left:18px;border-left:1px dashed var(--border);margin-left:6px;}
+.builder-empty{color:var(--text-muted);font-size:.8rem;font-style:italic;padding:6px 0;}
+.btn-mini{background:transparent;border:1px solid var(--border);color:var(--text-secondary);font-size:.64rem;font-weight:700;padding:3px 7px;border-radius:4px;cursor:pointer;font-family:inherit;white-space:nowrap;}
+.btn-mini:hover{background:var(--bg-hover);color:var(--text-primary);}
+.btn-mini-del{color:var(--accent-red);}
+.btn-mini-del:hover{background:var(--accent-red);color:#fff;}
 .check-row2{display:flex;align-items:center;gap:8px;font-size:.84rem;}
 .toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,12px);background:#16321f;border:1px solid rgba(47,157,108,.5);color:#d7fce8;padding:11px 18px;border-radius:9px;font-size:.85rem;font-weight:600;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:80;}
 .toast.is-shown{opacity:1;transform:translate(-50%,0);}
@@ -226,9 +236,27 @@ tbody tr:hover{background:var(--bg-hover);}
                 </div>
                 <div class="cat-form">
                   <div class="field-group">
+                    <span class="field-label">Cómo capturarlo — 3 opciones para comparar</span>
+                    <div class="mode-switch" id="catOpcionSwitch">
+                      <button type="button" class="mode-btn" data-opcion="A">A · Solo formulario</button>
+                      <button type="button" class="mode-btn" data-opcion="B">B · Formulario + JSON</button>
+                      <button type="button" class="mode-btn is-active" data-opcion="C">C · Solo JSON</button>
+                    </div>
+                    <span class="field-hint">Las tres guardan en el mismo catálogo — cambiar de opción no borra lo que ya agregaste. Es nada más para comparar y decidir cuál se queda.</span>
+                  </div>
+
+                  <div class="field-group" id="catSubModoWrap" style="display:none;margin-top:14px;">
+                    <span class="field-label">Para éste permiso, usar</span>
+                    <div class="mode-switch" id="catSubModoSwitch">
+                      <button type="button" class="mode-btn is-active" data-submodo="builder">Formulario</button>
+                      <button type="button" class="mode-btn" data-submodo="json">Pegar JSON</button>
+                    </div>
+                  </div>
+
+                  <div class="field-group" style="margin-top:14px;">
                     <span class="field-label">Dónde va</span>
                     <select id="nfPadre"></select>
-                    <span class="field-hint">Un módulo nuevo aparece en el menú; si eliges uno existente, reemplaza su estructura completa por la que pegues abajo.</span>
+                    <span class="field-hint">Un módulo nuevo aparece en el menú; si eliges uno existente, reemplaza su estructura completa por la que armes o pegues abajo.</span>
                   </div>
 
                   <div id="nfNuevoWrap">
@@ -248,12 +276,28 @@ tbody tr:hover{background:var(--bg-hover);}
                     </div>
                   </div>
 
-                  <div class="field-group" style="margin-top:14px;">
-                    <span class="field-label">JSON del módulo*</span>
-                    <textarea id="nfJson" rows="10" placeholder='{"general":"si","direccion":"si","documentos":{"modulo":"si","doctype":{"ch":"si","co":"sl","ju":"no"}}}'></textarea>
-                    <span class="field-hint">Pega el JSON tal cual está o va a estar en la base de datos. Puedes traer ya los valores ("si"/"sl"/"no", o "todo" para un dato fijo como tipoNomina), o dejarlo solo con la estructura — cualquier llave que no traiga uno de esos 4 valores se guarda como "No" y queda lista para editarse. No hace falta declarar de qué tipo es cada permiso — "modulo" y "general" siempre son Sí/No, el resto admite además "sl".</span>
+                  <!-- Opción A, y Opción B en modo Formulario: constructor a puros clics, sin escribir JSON. -->
+                  <div id="catBuilderWrap" style="margin-top:14px;">
+                    <div class="field-group">
+                      <span class="field-label">Estructura</span>
+                      <div class="builder-toolbar">
+                        <button type="button" class="btn-ghost" id="catBuilderAddLeafRoot">+ Permiso</button>
+                        <button type="button" class="btn-ghost" id="catBuilderAddGroupRoot">+ Grupo con candado</button>
+                      </div>
+                      <div id="catBuilderTree" class="builder-tree"></div>
+                      <span class="field-hint">Sí/No o Sí/sl/No se decide solo por el nombre ("modulo" y "general" son Sí/No, el resto admite "sl") — no hay que elegirlo aquí.</span>
+                    </div>
                   </div>
-                  <button type="button" class="btn-ghost" id="nfJsonEjemplo" style="margin-top:8px;">Ver un ejemplo</button>
+
+                  <!-- Opción C, y Opción B en modo Pegar JSON. -->
+                  <div id="catJsonWrap" style="display:none;margin-top:14px;">
+                    <div class="field-group">
+                      <span class="field-label" id="nfJsonLabel">JSON del módulo*</span>
+                      <textarea id="nfJson" rows="10" placeholder='{"general":"si","direccion":"si","documentos":{"modulo":"si","doctype":{"ch":"si","co":"sl","ju":"no"}}}'></textarea>
+                      <span class="field-hint">Pega el JSON tal cual está o va a estar en la base de datos. Puedes traer ya los valores ("si"/"sl"/"no", o "todo" para un dato fijo como tipoNomina), o dejarlo solo con la estructura — cualquier llave que no traiga uno de esos 4 valores se guarda como "No" y queda lista para editarse. No hace falta declarar de qué tipo es cada permiso — "modulo" y "general" siempre son Sí/No, el resto admite además "sl".</span>
+                    </div>
+                    <button type="button" class="btn-ghost" id="nfJsonEjemplo" style="margin-top:8px;">Ver un ejemplo</button>
+                  </div>
 
                   <div style="margin-top:18px;">
                     <button type="button" class="btn-save" id="catGuardarBtn">Agregar al catálogo</button>
@@ -876,29 +920,153 @@ function normalizeModuleJson(node){
 function slugify(str){
   return str.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+(.)/g, (m,c)=>c.toUpperCase()).replace(/[^a-zA-Z0-9]/g,'').replace(/^[A-Z]/, c=>c.toLowerCase());
 }
+const OPCION_CATALOGO_COMPLETO = '__full__';
+
+// ============================================================================
+// Las 3 opciones de captura, para comparar (todas guardan en el mismo MODEL):
+//   A) Solo formulario  — constructor a puros clics, sin escribir JSON.
+//   B) Formulario + JSON — igual que A o C, se elige por cada permiso.
+//   C) Solo JSON        — pegar el módulo (o el catálogo completo) en crudo.
+// ============================================================================
+let catOpcion = 'C';        // 'A' | 'B' | 'C'
+let catSubModo = 'builder'; // solo aplica dentro de la Opción B: 'builder' | 'json'
+
+function jsonDisponible(){ return catOpcion === 'C' || (catOpcion === 'B' && catSubModo === 'json'); }
+function builderDisponible(){ return catOpcion === 'A' || (catOpcion === 'B' && catSubModo === 'builder'); }
+
 function fillPadreOptions(){
   const opciones = [{value:'', label:'— Nuevo módulo —'}]
     .concat(Object.keys(MODEL).map(mk => ({value:mk, label:'Actualizar: '+prettyLabel(mk)})));
+  // "Catálogo completo" es un pegado de texto, así que solo tiene sentido cuando el JSON está
+  // disponible (Opción C, o B en modo Pegar JSON) — con el formulario no se puede armar de un jalón.
+  if (jsonDisponible()) opciones.push({value:OPCION_CATALOGO_COMPLETO, label:'— Catálogo completo (reemplaza TODO) —'});
   const valorPrevio = nfPadre.value;
   nfPadre.innerHTML = opciones.map(o => `<option value="${o.value}">${o.label}</option>`).join('');
   if (opciones.some(o => o.value === valorPrevio)) nfPadre.value = valorPrevio;
   syncCatalogoFields();
 }
 function syncCatalogoFields(){
-  const esNuevo = nfPadre.value === '';
-  nfNuevoWrap.style.display = esNuevo ? '' : 'none';
+  nfNuevoWrap.style.display = nfPadre.value === '' ? '' : 'none';
+  document.getElementById('nfJsonLabel').textContent = nfPadre.value === OPCION_CATALOGO_COMPLETO ? 'JSON completo*' : 'JSON del módulo*';
+  if (builderDisponible()) builderReset();
 }
 nfPadre.addEventListener('change', syncCatalogoFields);
 nfNombre.addEventListener('input', () => nfClave.value = slugify(nfNombre.value));
-document.getElementById('nfJsonEjemplo').addEventListener('click', () => {
-  // "importacion" viene sin valor a propósito, para mostrar que también se puede pegar
-  // solo la estructura: se normaliza a "no" al guardar.
-  nfJson.value = JSON.stringify({modulo:'si', tipos:{nacional:'si', importacion:''}}, null, 2);
+
+function syncCatOpcionUI(){
+  document.querySelectorAll('#catOpcionSwitch .mode-btn').forEach(b => b.classList.toggle('is-active', b.dataset.opcion === catOpcion));
+  document.getElementById('catSubModoWrap').style.display = catOpcion === 'B' ? '' : 'none';
+  document.querySelectorAll('#catSubModoSwitch .mode-btn').forEach(b => b.classList.toggle('is-active', b.dataset.submodo === catSubModo));
+
+  document.getElementById('catBuilderWrap').style.display = builderDisponible() ? '' : 'none';
+  document.getElementById('catJsonWrap').style.display = jsonDisponible() ? '' : 'none';
+
+  fillPadreOptions(); // recalcula si "Catálogo completo" debe aparecer, y refresca el constructor si aplica
+}
+document.querySelectorAll('#catOpcionSwitch .mode-btn').forEach(b => b.addEventListener('click', () => {
+  catOpcion = b.dataset.opcion;
+  if (!jsonDisponible() && !builderDisponible()) catSubModo = 'builder'; // no debería pasar, por seguridad
+  syncCatOpcionUI();
+}));
+document.querySelectorAll('#catSubModoSwitch .mode-btn').forEach(b => b.addEventListener('click', () => {
+  catSubModo = b.dataset.submodo;
+  syncCatOpcionUI();
+}));
+
+// ---- Opción A / Opción B en modo Formulario: constructor visual, sin escribir JSON ----
+// Cada permiso nace "no" (o {modulo:'no'} si es grupo); Sí/No vs Sí/sl/No lo decide el motor
+// por el nombre de la llave, igual que en cualquier otro lado — no hay que elegirlo aquí.
+let borrador = {};
+
+function builderReset(){
+  const padrePath = nfPadre.value;
+  borrador = (padrePath && padrePath !== OPCION_CATALOGO_COMPLETO && MODEL[padrePath])
+    ? JSON.parse(JSON.stringify(MODEL[padrePath])) // "Actualizar existente": parte de lo que ya tiene
+    : {};
+  renderBuilderTree();
+}
+function renderBuilderTree(){
+  const cont = document.getElementById('catBuilderTree');
+  const keys = Object.keys(borrador);
+  cont.innerHTML = keys.length ? renderBuilderLevel(borrador, []) : '<div class="builder-empty">Todavía no agregas ningún permiso — usa los botones de arriba.</div>';
+}
+function renderBuilderLevel(node, path){
+  return Object.keys(node).map(k => {
+    const child = node[k];
+    const childPath = [...path, k];
+    const esHoja = isLeaf(child);
+    const tag = esHoja ? ((k==='modulo'||k==='general') ? 'Sí/No' : 'Sí/sl/No') : 'grupo';
+    return `<div class="builder-node">
+      <div class="builder-row">
+        <span class="builder-key">${prettyLabel(k)}</span>
+        <span class="node-tipo">${tag}</span>
+        ${!esHoja ? `<button type="button" class="btn-mini" data-baddleaf="${childPath.join('.')}">+ Permiso</button>
+        <button type="button" class="btn-mini" data-baddgroup="${childPath.join('.')}">+ Grupo</button>` : ''}
+        <button type="button" class="btn-mini btn-mini-del" data-bdel="${childPath.join('.')}">Quitar</button>
+      </div>
+      ${!esHoja ? `<div class="builder-children">${renderBuilderLevel(child, childPath)}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+function builderAdd(pathArr, esGrupo){
+  const nombre = prompt(esGrupo ? 'Nombre del grupo (ej. Documentos):' : 'Nombre del permiso (ej. Autorizar):');
+  if (!nombre || !nombre.trim()) return;
+  const clave = slugify(nombre.trim());
+  if (!clave){ alert('Ese nombre no genera una llave válida.'); return; }
+  let target = borrador;
+  pathArr.forEach(p => { target = target[p]; });
+  if (target[clave]) { alert('Ya existe un permiso con esa clave ahí.'); return; }
+  target[clave] = esGrupo ? {modulo:'no'} : 'no';
+  renderBuilderTree();
+}
+function builderDel(pathArr){
+  let target = borrador;
+  for (let i=0;i<pathArr.length-1;i++) target = target[pathArr[i]];
+  delete target[pathArr[pathArr.length-1]];
+  renderBuilderTree();
+}
+document.getElementById('catBuilderAddLeafRoot').addEventListener('click', () => builderAdd([], false));
+document.getElementById('catBuilderAddGroupRoot').addEventListener('click', () => builderAdd([], true));
+document.getElementById('catBuilderTree').addEventListener('click', e => {
+  const addLeaf = e.target.closest('[data-baddleaf]');
+  const addGroup = e.target.closest('[data-baddgroup]');
+  const del = e.target.closest('[data-bdel]');
+  if (addLeaf) return builderAdd(addLeaf.dataset.baddleaf.split('.'), false);
+  if (addGroup) return builderAdd(addGroup.dataset.baddgroup.split('.'), true);
+  if (del) return builderDel(del.dataset.bdel.split('.'));
 });
+document.getElementById('nfJsonEjemplo').addEventListener('click', () => {
+  if (nfPadre.value === OPCION_CATALOGO_COMPLETO){
+    // Ejemplo de catálogo completo: varios módulos de un jalón, más "menu" (se ignora al guardar).
+    nfJson.value = JSON.stringify({
+      menu: {empl:'si', empr:'si', comp:'si'},
+      trabajadores: MODEL.trabajadores,
+      empresas: MODEL.empresas,
+      compras: {general:'si', modulo:'si', tipos:{nacional:'si', importacion:''}}
+    }, null, 2);
+  } else {
+    // "importacion" viene sin valor a propósito, para mostrar que también se puede pegar
+    // solo la estructura: se normaliza a "no" al guardar.
+    nfJson.value = JSON.stringify({modulo:'si', tipos:{nacional:'si', importacion:''}}, null, 2);
+  }
+});
+
+// Genera una clave de menú corta y única para un módulo nuevo que aparece dentro de un
+// pegado de "Catálogo completo" (ahí no se pregunta la clave de menú módulo por módulo).
+// Es un valor de trabajo para esta demo: en el sistema real, a un módulo nuevo real
+// probablemente le conviene una clave elegida a mano, no generada así.
+function generarClaveMenu(moduleKey, existentes){
+  const base = moduleKey.toLowerCase().replace(/[^a-z]/g,'').slice(0,6) || 'mod';
+  let candidato = base, i = 1;
+  while (existentes.includes(candidato)) { candidato = base.slice(0, 7-String(i).length) + i; i++; }
+  return candidato;
+}
 
 function resetCatalogoForm(){
   fillPadreOptions();
   nfNombre.value=''; nfClave.value=''; nfMenuClave.value=''; nfJson.value='';
+  borrador = {};
+  renderBuilderTree();
 }
 
 // Vista de solo lectura del catálogo, para ubicarse antes de agregar algo nuevo. Cada hoja
@@ -923,12 +1091,59 @@ function renderCatalogTree(){
 }
 
 document.getElementById('catGuardarBtn').addEventListener('click', () => {
+  const usandoBuilder = builderDisponible();
   const padrePath = nfPadre.value;
   const esNuevo = padrePath === '';
+  const esCompleto = !usandoBuilder && padrePath === OPCION_CATALOGO_COMPLETO;
 
   let parsed;
-  try { parsed = JSON.parse(nfJson.value); }
-  catch(e) { alert('El JSON no es válido: ' + e.message); return; }
+  if (usandoBuilder){
+    if (Object.keys(borrador).length === 0){ alert('Agrega al menos un permiso con los botones de arriba.'); return; }
+    parsed = borrador; // ya nace con valores válidos ('no' o {modulo:'no',...}), no hay texto que parsear
+  } else {
+    try { parsed = JSON.parse(nfJson.value); }
+    catch(e) { alert('El JSON no es válido: ' + e.message); return; }
+  }
+
+  if (esCompleto){
+    // "menu" no es parte del catálogo (es el on/off de UN usuario, no la definición de los
+    // módulos), así que se ignora si viene incluido — nunca se guarda dentro de MODEL.
+    if (parsed.menu) delete parsed.menu;
+
+    const check = validateModuleJson(parsed);
+    if (!check.ok){ alert('El catálogo no pasó la validación:\n' + check.error); return; }
+    const normalizado = normalizeModuleJson(parsed);
+
+    const clavesNuevas = Object.keys(normalizado);
+    const clavesActuales = Object.keys(MODEL);
+    const seVanABorrar = clavesActuales.filter(k => !clavesNuevas.includes(k));
+    const sonNuevos = clavesNuevas.filter(k => !clavesActuales.includes(k));
+
+    let msg = 'Vas a reemplazar TODO el catálogo (' + clavesNuevas.length + ' módulo(s)).';
+    if (seVanABorrar.length) msg += '\n\nSe van a QUITAR del catálogo: ' + seVanABorrar.map(prettyLabel).join(', ') + '.';
+    if (sonNuevos.length) msg += '\n\nSon nuevos (se les genera una clave de menú automática): ' + sonNuevos.map(prettyLabel).join(', ') + '.';
+    if (!confirm(msg + '\n\n¿Continuar?')) return;
+
+    // Limpia del menú los módulos que van a desaparecer.
+    seVanABorrar.forEach(clave => {
+      const mk = SECTION_TO_MENU[clave];
+      if (mk){ delete MENU_TO_SECTION[mk]; delete SECTION_TO_MENU[clave]; delete MENU_LABELS[mk]; }
+    });
+    // Da de alta la clave de menú de los módulos nuevos (los que ya existían conservan la suya).
+    sonNuevos.forEach(clave => {
+      const menuClave = generarClaveMenu(clave, Object.keys(MENU_LABELS));
+      MENU_TO_SECTION[menuClave] = clave;
+      SECTION_TO_MENU[clave] = menuClave;
+      MENU_LABELS[menuClave] = prettyLabel(clave);
+    });
+
+    MODEL = normalizado;
+    showToast('Catálogo completo reemplazado: ' + clavesNuevas.length + ' módulo(s) (solo en memoria, demo).');
+    resetCatalogoForm();
+    renderCatalogTree();
+    return;
+  }
+
   const check = validateModuleJson(parsed);
   if (!check.ok){ alert('El módulo no pasó la validación:\n' + check.error); return; }
   parsed = normalizeModuleJson(parsed);
@@ -968,10 +1183,10 @@ document.querySelectorAll('.navitem[data-page]').forEach(btn => btn.addEventList
 document.querySelectorAll('[data-ctab]').forEach(btn => btn.addEventListener('click', () => {
   document.querySelectorAll('[data-ctab]').forEach(b => b.classList.toggle('is-active', b === btn));
   document.querySelectorAll('[data-ctab-panel]').forEach(p => p.classList.toggle('is-active', p.dataset.ctabPanel === btn.dataset.ctab));
-  if (btn.dataset.ctab === 'catalogo'){ fillPadreOptions(); renderCatalogTree(); }
+  if (btn.dataset.ctab === 'catalogo'){ syncCatOpcionUI(); renderCatalogTree(); }
 }));
 
-resetCatalogoForm();
+syncCatOpcionUI();
 renderCatalogTree();
 goToPage('empleados');
 
